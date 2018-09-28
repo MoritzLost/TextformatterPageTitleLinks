@@ -4,6 +4,7 @@ namespace Processwire;
 class TextformatterPageTitleLinks extends Textformatter implements ConfigurableModule, Module
 {
     const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
+    const DEFAULT_SELECTOR = 'has_parent!=2, template!=admin';
 
     public static function getModuleInfo()
     {
@@ -40,6 +41,8 @@ class TextformatterPageTitleLinks extends Textformatter implements ConfigurableM
                 $selector->error($message);
             }
             $selector->attr('value', $data['selector']);
+        } else {
+            $selector->attr('value', self::DEFAULT_SELECTOR);
         }
 
         $wrapper->add($selector);
@@ -58,7 +61,12 @@ class TextformatterPageTitleLinks extends Textformatter implements ConfigurableM
         //         return $this->getAllowedPages();
         //     }
         // );
+
         $allowed_pages = $this->getAllowedPages();
+        if (!count($allowed_pages)) {
+            $this->log->save('modules', 'The textfilter ' . $this->className() . ' found no pages matching the selector set in the options. Make sure the selector is correct.');
+            return;
+        }
 
         // title_id_array is cached, as it's generation is costly
         $title_id_array = $this->cache->getFor(
@@ -95,7 +103,8 @@ class TextformatterPageTitleLinks extends Textformatter implements ConfigurableM
 
     private function getAllowedPages()
     {
-        return $this->pages->find($this->selector);
+        $selector = !empty($this->selector) ? $this->selector : self::DEFAULT_SELECTOR;
+        return $this->pages->find($selector);
     }
 
     private function getTitleIdArray(PageArray $pages)
