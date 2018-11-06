@@ -27,7 +27,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         $str = preg_replace_callback(
             // format the titles as regex patterns
             array_map(function ($title) {
-                return '[' . preg_quote($title) . ']';
+                return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array) {
