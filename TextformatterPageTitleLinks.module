@@ -1,12 +1,11 @@
 <?php
 namespace Processwire;
 
-class TextformatterPageTitleLinks extends Textformatter implements ConfigurableModule, Module
+class TextformatterPageTitleLinks extends Textformatter implements Module
 {
     const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
-    const DEFAULT_SELECTOR = 'has_parent!=2, template!=admin';
 
-    public static function getModuleInfo()
+    public static function getModuleInfo(): array
     {
         return [
             'title' => 'Automatically link page titles',
@@ -19,74 +18,21 @@ class TextformatterPageTitleLinks extends Textformatter implements ConfigurableM
         ];
     }
 
-    public static function getModuleConfigInputfields(array $data)
-    {
-        $wrapper = new InputfieldWrapper();
-
-        // Selector string for pages to auto-link
-        $selector = wire()->modules->get('InputfieldText');
-        $selector->name = 'selector';
-        $selector->label = 'Selector string';
-        $selector->description = 'An optional Processwire selector to specify what pages should be considered for automatic page title links. Only pages matching this selector';
-        $selector->notes = 'To limit the automatic page titles to one or more templates, use a selector like `template=basic-page|other-template`.';
-
-        if (!empty($data['selector'])) {
-            // this validates the selector by passing it to Pages::find as an
-            // argument and adding any errors thrown to the inputfield
-            try {
-                $test_pages = wire('pages')->find($data['selector']);
-            } catch (\Throwable $e) {
-                $message = 'It looks like this is not a valid selector. Please fix the following error message and try again:' . PHP_EOL;
-                $message .= $e->getMessage();
-                $selector->error($message);
-            }
-            $selector->attr('value', $data['selector']);
-        } else {
-            $selector->attr('value', self::DEFAULT_SELECTOR);
-        }
-
-        $wrapper->add($selector);
-
-        return $wrapper;
-    }
-
     public function format(&$str)
     {
-        // this doesn't work, should find a better way to cache those results
-        // $allowed_pages = $this->cache->getFor(
-        //     $this->getLastModifiedNamespace(),
-        //     'last_page_modified_time',
-        //     WireCache::expireSave,
-        //     function () {
-        //         return $this->getAllowedPages();
-        //     }
-        // );
-
-        $allowed_pages = $this->getAllowedPages();
-        if (!count($allowed_pages)) {
-            $this->log->save('modules', 'The textfilter ' . $this->className() . ' found no pages matching the selector set in the options. Make sure the selector is correct.');
+        if (empty($this->auto_link_templates)) {
             return;
         }
-
-        // title_id_array is cached, as it's generation is costly
-        $title_id_array = $this->cache->getFor(
-            $this->getLastModifiedNamespace($allowed_pages),
-            'title_id_array',
-            WireCache::expireSave,
-            function () use ($allowed_pages) {
-                return $this->getTitleIdArray($allowed_pages);
-            }
-        );
-
+        $id_title_array = $this->getTitleIdArrayFromDatabase();
         $str = preg_replace_callback(
-            array_map(
-                function ($title) {
-                    return '[' . preg_quote($title) . ']';
-                },
-                array_keys($title_id_array)
-            ),
-            function (array $matches) use ($title_id_array) {
-                $url = $this->pages->get($title_id_array[$matches[0]])->url();
+            // format the titles as regex patterns
+            array_map(function ($title) {
+                return '[' . preg_quote($title) . ']';
+            }, $id_title_array),
+            // replace the titles with links to the url to the respective page
+            function (array $matches) use ($id_title_array) {
+                $page_id = array_search($matches[0], $id_title_array);
+                $url = $this->pages->get((int) $page_id)->url();
                 return '<a href="' . $url . '">' . $matches[0] . '</a>';
             },
             $str
@@ -95,49 +41,41 @@ class TextformatterPageTitleLinks extends Textformatter implements ConfigurableM
 
     public function formatValue(Page $page, Field $field, &$value)
     {
-        return $this->format($value);
+        $this->format($value);
     }
 
-
-
-
-    private function getAllowedPages()
+    private function getTitleIdArrayFromDatabase(): array
     {
-        $selector = !empty($this->selector) ? $this->selector : self::DEFAULT_SELECTOR;
-        return $this->pages->find($selector);
-    }
-
-    private function getTitleIdArray(PageArray $pages)
-    {
-        $title_id_array = [];
-        foreach ($pages as $page) {
-            if (!empty($page->title)) {
-                $title_id_array[$page->title] = $page->id;
-            }
+        // current language row
+        $language_row = 'data';
+        // detect language support and change the row if
+        // the current language is not the default one
+        $current_lang = $this->wire('user')->language;
+        if (!empty($current_lang) && !$current_lang->isDefault()) {
+            $language_row .= $current_lang->id;
         }
-        return $title_id_array;
+        // allowed templates for IN statement
+        $allowed_templates = implode(', ', $this->auto_link_templates);
+        /**
+         * The main query to get all titles for matching templates. Caveats:
+         * - If multiple pages have the same name, a random one will be selected.
+         * - If the language value is NULL, there's currently no fallback to the default language.
+         */
+        $query = "SELECT field_title.pages_id, field_title.{$language_row} AS title
+            FROM field_title
+            LEFT JOIN pages ON field_title.pages_id = pages.id
+            WHERE pages.templates_id IN ({$allowed_templates}) AND field_title.{$language_row} IS NOT NULL
+            GROUP BY title
+            ORDER BY LENGTH(title)
+            ";
+        return $this->wire('database')->pdo()->query($query)->fetchAll(\PDO::FETCH_KEY_PAIR);
     }
 
-    private function getTitleListForRegex(PageArray $pages)
-    {
-        $titles = array_column(
-            iterator_to_array($pages),
-            'title'
-        );
-        $titles_escaped = array_map(
-            function ($title) {
-                return preg_quote($title);
-            },
-            $titles
-        );
-        $piped_list = implode(
-            '|',
-            $titles_escaped
-        );
-        return "({$piped_list})";
-    }
+    /**
+     * Probably not needed any more.
+     */
 
-    private function getLastModifiedNamespace(?PageArray $pages = NULL)
+    private function getLastModifiedNamespace(?PageArray $pages = null)
     {
         if (empty($pages)) {
             $pages = $this->wire('pages');
