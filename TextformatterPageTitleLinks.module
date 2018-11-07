@@ -5,6 +5,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 {
     const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
 
+    /**
+     * @var ?array $title_id_array Holds the array with titles of ids for this request.
+     */
+    private static $title_id_array = null;
+
     public static function getModuleInfo(): array
     {
         return [
@@ -20,11 +25,34 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
     public function format(&$str)
     {
+        $this->formatValue($this->wire('page'), new Field(), $str);
+    }
+
+    public function formatValue(Page $page, Field $field, &$value)
+    {
+        // no templates set yet
         if (empty($this->auto_link_templates)) {
             return;
         }
+
+        // get all pages of the selected templates as an associative id => title array
         $id_title_array = $this->getTitleIdArrayFromDatabase();
-        $str = preg_replace_callback(
+
+        // exclude current id from this replacement if the option is active
+        if ($this->exclude_current_page) {
+            $current_id = (int) $page->id;
+            if (!empty($current_id) && array_key_exists($current_id, $id_title_array)) {
+                unset($id_title_array[$current_id]);
+            }
+        }
+
+        // abort if no linkable pages exist at this point
+        if (empty($id_title_array)) {
+            return;
+        }
+
+        // perform the replacement with a regex call
+        $value = preg_replace_callback(
             // format the titles as regex patterns
             array_map(function ($title) {
                 return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
@@ -35,17 +63,17 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 $url = $this->pages->get((int) $page_id)->url();
                 return '<a href="' . $url . '">' . $matches[0] . '</a>';
             },
-            $str
+            $value
         );
-    }
-
-    public function formatValue(Page $page, Field $field, &$value)
-    {
-        $this->format($value);
     }
 
     private function getTitleIdArrayFromDatabase(): array
     {
+        // only run the database query once per request
+        if (null !== $this->title_id_array) {
+            return $this->title_id_array;
+        }
+
         // current language row
         $language_row = 'data';
         // detect language support and change the row if
@@ -54,8 +82,10 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         if (!empty($current_lang) && !$current_lang->isDefault()) {
             $language_row .= $current_lang->id;
         }
+
         // allowed templates for IN statement
         $allowed_templates = implode(', ', $this->auto_link_templates);
+
         /**
          * The main query to get all titles for matching templates. Caveats:
          * - If multiple pages have the same name, a random one will be selected.
@@ -66,9 +96,12 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             LEFT JOIN pages ON field_title.pages_id = pages.id
             WHERE pages.templates_id IN ({$allowed_templates}) AND field_title.{$language_row} IS NOT NULL
             GROUP BY title
-            ORDER BY LENGTH(title)
-            ";
-        return $this->wire('database')->pdo()->query($query)->fetchAll(\PDO::FETCH_KEY_PAIR);
+            ORDER BY LENGTH(title)";
+        return $this->title_id_array = $this
+                            ->wire('database')
+                            ->pdo()
+                            ->query($query)
+                            ->fetchAll(\PDO::FETCH_KEY_PAIR);
     }
 
     /**
