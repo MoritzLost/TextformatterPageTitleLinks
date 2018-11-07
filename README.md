@@ -18,19 +18,20 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 
 ### Caveats
 
-- This uses regex, so if for a page with many pages, this will have a significant performance impact! Make sure to cache the results.
+- This uses regex, so if it's used on a page with many pages, this will have a significant performance impact! Make sure to cache the results.
 - The formatter does not check if the title is already placed within an anchor tag (this is non-trivial as the replacement is done using regex, which is not great at backtracking - let me know if you have any suggestions).
 - If there are multiple pages with the same title, a random one will get linked (determined by MySQL, as the query uses `GROUP BY` to prevent duplicates).
-- If the page has no title in the current language, it won't be linked (this could be seen as a feature as well).
+- If the page has no title in the current language, it won't be linked (this could be seen as a feature as well ...).
 
 ### Planned features
 
 - Add a configurable CSS class to all automatically created links.
+- Make multi-language behaviour configurable.
 - Inbuilt caching per field and page.
 
 ## Installation & usage
 
-At the moment, this plugin is not available in the ProcessWire module directory, so you have to manually clone or download the repository it into your `site/modules` directory and install it through the backend.
+At the moment, this plugin is not available in the ProcessWire module directory, so you have to manually clone or download the repository into your `site/modules` directory and install it through the backend.
 
 After that, simply add the textformatter to any fields you want to via the field settings.
 
