@@ -51,6 +51,8 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return;
         }
 
+        $css_class = $this->add_link_class;
+
         // perform the replacement with a regex call
         $value = preg_replace_callback(
             // format the titles as regex patterns
@@ -58,10 +60,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
-            function (array $matches) use ($id_title_array) {
+            function (array $matches) use ($id_title_array, $css_class) {
                 $page_id = array_search($matches[0], $id_title_array);
                 $url = $this->pages->get((int) $page_id)->url();
-                return '<a href="' . $url . '">' . $matches[0] . '</a>';
+                $class_attribute = !empty($css_class) ? ' class="' . $css_class . '"' : '';
+                return '<a href="' . $url . '"' . $class_attribute . '>' . $matches[0] . '</a>';
             },
             $value
         );

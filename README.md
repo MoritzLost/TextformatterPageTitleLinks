@@ -15,6 +15,7 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 - Only queries the database once per request.
 - Allows you to set which templates will get automatically linked.
 - Has an option to exclude the current page.
+- Can add configurable CSS classes to all automatically created links.
 
 ### Caveats
 
@@ -25,7 +26,6 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 
 ### Planned features
 
-- Add a configurable CSS class to all automatically created links.
 - Make multi-language behaviour configurable.
 - Inbuilt caching per field and page.
 
@@ -35,8 +35,10 @@ At the moment, this plugin is not available in the ProcessWire module directory,
 
 After that, simply add the textformatter to any fields you want to via the field settings.
 
-## Settings
+## Configuration
 
 The module is configurable through the ProcessWire backend. After installation, you first have to set the templates you wish to be automatically linked. By default, no templates are selected, so this module will do nothing!
 
 You can also choose to exclude the current page, so you won't end up with a link to the page you are on. This behaviour is turned off by default.
+
+You can add any number of CSS classes you want to add to all automatically generated links through the settings as well.
