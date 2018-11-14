@@ -16,7 +16,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             'title' => __('Automatically link page titles'),
             'summary' => __('This converts all page titles to a link to the corresponding page.'),
             'author' => 'Moritz L\'Hoest, herebedragons.world',
-            'version' => '0.2.0',
+            'version' => '0.3.0',
             'requires' => [
                 'PHP>=7.0.0'
             ]
@@ -33,6 +33,15 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // no templates set yet
         if (empty($this->auto_link_templates)) {
             return;
+        }
+
+        // if this is a repeater (matrix) page, make sure
+        // $page references the "real" current page
+        if (
+            $page instanceof RepeaterPage ||
+            $page instanceof RepeaterMatrixPage
+        ) {
+            $page = wire('page');
         }
 
         // get all pages of the selected templates as an associative id => title array
