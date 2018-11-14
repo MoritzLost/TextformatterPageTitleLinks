@@ -20,11 +20,14 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $asm = wire()->modules->get('InputfieldAsmSelect');
         $asm->name = 'auto_link_templates'; 
         $asm->label = $this->_('Templates to search for matching titles.');
-
+        $asm->setAsmSelectOption('sortable', false);
+        $asm->columnWidth = 50;
+        
         // Checkbox to exclude current page
         $check = wire()->modules->get('InputfieldCheckbox');
         $check->name = 'exclude_current_page';
         $check->label = $this->_("Don't link to the current page?");
+        $check->columnWidth = 50;
 
         $class = wire()->modules->get('InputfieldText');
         $class->name = 'add_link_class';
