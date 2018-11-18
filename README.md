@@ -10,11 +10,12 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 
 ## Features
 
-- Queries the database directly to get page titles for performance.
+- Allows you to limit the automatic links by template.
+- Only includes published & visible pages by default, with an option to include hidden pages.
+- Queries the database directly for improved performance.
 - Supports multi-language sites.
 - Only queries the database once per request.
-- Allows you to set which templates will get automatically linked.
-- Has an option to exclude the current page.
+- Automatically excludes the current page, with an option to change that behaviour.
 - Can add configurable CSS classes to all automatically created links.
 
 ### Caveats
