@@ -16,7 +16,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             'title' => __('Automatically link page titles'),
             'summary' => __('This converts all page titles to a link to the corresponding page.'),
             'author' => 'Moritz L\'Hoest, herebedragons.world',
-            'version' => '0.3.0',
+            'version' => '0.4.0',
             'requires' => [
                 'PHP>=7.0.0'
             ]
