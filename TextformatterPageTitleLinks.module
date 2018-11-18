@@ -47,8 +47,8 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // get all pages of the selected templates as an associative id => title array
         $id_title_array = $this->getTitleIdArrayFromDatabase();
 
-        // exclude current id from this replacement if the option is active
-        if ($this->exclude_current_page) {
+        // exclude current id from this replacement if the option to include it is not active
+        if (!$this->include_current_page) {
             $current_id = (int) $page->id;
             if (!empty($current_id) && array_key_exists($current_id, $id_title_array)) {
                 unset($id_title_array[$current_id]);
