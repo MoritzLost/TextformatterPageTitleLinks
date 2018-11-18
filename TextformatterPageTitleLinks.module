@@ -71,7 +71,12 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array, $css_class) {
                 $page_id = array_search($matches[0], $id_title_array);
-                $url = $this->pages->get((int) $page_id)->url();
+                $linked_page = $this->pages->get((int) $page_id);
+                // finaly check to make sure the user has the right to view this page
+                if (!$linked_page->viewable()) {
+                    return $matches[0];
+                }
+                $url = $linked_page->url();
                 $class_attribute = !empty($css_class) ? ' class="' . $css_class . '"' : '';
                 return '<a href="' . $url . '"' . $class_attribute . '>' . $matches[0] . '</a>';
             },
