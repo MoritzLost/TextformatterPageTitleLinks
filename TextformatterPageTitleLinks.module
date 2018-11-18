@@ -98,15 +98,26 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // allowed templates for IN statement
         $allowed_templates = implode(', ', $this->auto_link_templates);
 
+        // unpublished pages will never be linked
+        $status_bitmask = Page::statusUnpublished;
+        // hidden pages will only be included if the option is set
+        if (!$this->include_hidden_pages) {
+            $status_bitmask += Page::statusHidden;
+        }
+
         /**
          * The main query to get all titles for matching templates. Caveats:
          * - If multiple pages have the same name, a random one will be selected.
          * - If the language value is NULL, there's currently no fallback to the default language.
          */
-        $query = "SELECT field_title.pages_id, field_title.{$language_row} AS title
-            FROM field_title
-            LEFT JOIN pages ON field_title.pages_id = pages.id
-            WHERE pages.templates_id IN ({$allowed_templates}) AND field_title.{$language_row} IS NOT NULL
+        $query = "SELECT
+                field_title.pages_id,
+                field_title.{$language_row} AS title
+            FROM pages
+            LEFT JOIN field_title ON pages.id = field_title.pages_id
+            WHERE pages.templates_id IN ({$allowed_templates})
+            AND pages.status & {$status_bitmask} = 0
+            AND field_title.{$language_row} IS NOT NULL
             GROUP BY title
             ORDER BY LENGTH(title)";
         return $this->title_id_array = $this

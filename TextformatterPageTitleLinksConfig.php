@@ -8,6 +8,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         return [
             'auto_link_templates' => [],
             'exclude_current_page' => false,
+            'include_hidden_pages' => false,
             'add_link_class' => '',
         ];
     }
@@ -21,14 +22,21 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $asm->name = 'auto_link_templates'; 
         $asm->label = $this->_('Templates to search for matching titles.');
         $asm->setAsmSelectOption('sortable', false);
-        $asm->columnWidth = 50;
-        
+        $asm->columnWidth = 33;
+
         // Checkbox to exclude current page
         $check = wire()->modules->get('InputfieldCheckbox');
         $check->name = 'exclude_current_page';
         $check->label = $this->_("Don't link to the current page?");
-        $check->columnWidth = 50;
+        $check->columnWidth = 33;
 
+        // Checkbox to include hidden pages
+        $hidden = wire()->modules->get('InputfieldCheckbox');
+        $hidden->name = 'include_hidden_pages';
+        $hidden->label = $this->_("Include hidden pages?");
+        $hidden->columnWidth = 33;
+
+        // text field for css classes
         $class = wire()->modules->get('InputfieldText');
         $class->name = 'add_link_class';
         $class->label = $this->_('Optional class(es) to add to the links.');
@@ -45,6 +53,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
 
         $inputfields->add($asm);
         $inputfields->add($check);
+        $inputfields->add($hidden);
         $inputfields->add($class);
         return $inputfields;
     }
