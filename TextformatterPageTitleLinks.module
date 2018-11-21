@@ -60,8 +60,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return;
         }
 
-        $css_class = $this->add_link_class;
-
         // perform the replacement with a regex call
         $value = preg_replace_callback(
             // format the titles as regex patterns
@@ -69,19 +67,37 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
-            function (array $matches) use ($id_title_array, $css_class) {
+            function (array $matches) use ($id_title_array) {
                 $page_id = array_search($matches[0], $id_title_array);
                 $linked_page = $this->pages->get((int) $page_id);
-                // finaly check to make sure the user has the right to view this page
-                if (!$linked_page->viewable()) {
-                    return $matches[0];
-                }
-                $url = $linked_page->url();
-                $class_attribute = !empty($css_class) ? ' class="' . $css_class . '"' : '';
-                return '<a href="' . $url . '"' . $class_attribute . '>' . $matches[0] . '</a>';
+                return $this->buildTitlePageLink($matches[0], $linked_page);
             },
             $value
         );
+    }
+
+    private function buildTitlePageLink(string $title, Page $page) {
+        // check if the user can view the page, otherwise just return the title as-is
+        if (!$page->viewable()) {
+            return $title;
+        }
+
+        // build attributes
+        $url = $page->url();
+        $class_attribute = '';
+        $css_class = $this->add_link_class;
+        if (!empty($css_class)) {
+            if (strpos($css_class, '{') !== false && strpos($css_class, '}') !== false) {
+                // enable passing page fields to be used for the class, e.g.:
+                // "automatic-link template-{template}"
+                $css_class = $page->getMarkup($css_class);
+                // sanitize css class
+                $css_class = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '', $css_class), ' ');
+            }
+            $class_attribute = ' class="' . $css_class . '"';
+        }
+
+        return '<a href="' . $url . '"' . $class_attribute . '>' . $title . '</a>';
     }
 
     private function getTitleIdArrayFromDatabase(): array
