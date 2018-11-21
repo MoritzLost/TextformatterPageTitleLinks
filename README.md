@@ -1,7 +1,5 @@
 # TextformatterPageTitleLinks
 
-**WARNING**: This module is still in development and should be considered **unstable**.
-
 This is a Textformatter module for [ProcessWire](https://processwire.com/) that replaces any title of pages on your site with links to that page.
 
 ## Description
@@ -15,8 +13,9 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 - Automatically excludes the current page, with an option to change that behaviour.
 - Supports multi-language sites.
 - Can add configurable CSS classes to all automatically created links.
+    - Includes the ability to use page fields as replacement patterns for CSS classes.
 - Queries the database directly for improved performance.
-- Only queries the database once per request.
+    - Only queries the database once per request.
 
 ### Caveats
 

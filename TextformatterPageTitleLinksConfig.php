@@ -20,7 +20,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         // ASM select for templates
         $asm = wire()->modules->get('InputfieldAsmSelect');
         $asm->name = 'auto_link_templates'; 
-        $asm->label = $this->_('Templates to search for matching titles.');
+        $asm->label = $this->_('Templates to search for matching titles');
         $asm->setAsmSelectOption('sortable', false);
         $asm->columnWidth = 33;
 
@@ -40,6 +40,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $class = wire()->modules->get('InputfieldText');
         $class->name = 'add_link_class';
         $class->label = $this->_('Optional class(es) to add to the links.');
+        $class->description = $this->_('All classes created by the module will include those class(es). This is passed to [$page->getMarkup](https://processwire.com/api/ref/page/get-markup/), so you can even use replacement patterns with the link target page. Try this: `template-{template}`');
         $class->notes = $this->_('You can use this to style automatically created links differently in CSS, or to target them with JavaScript.');
 
         // add all non-system templates
