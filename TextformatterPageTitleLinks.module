@@ -6,9 +6,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
 
     /**
-     * @var ?array $title_id_array Holds cached data for getTitleIdArrayFromDatabase().
+     * @var array $language_titles_cache Holds cached data for getTitleIdArrayFromDatabase().
      */
-    private static $title_id_array = null;
+    private static $language_titles_cache = [];
 
     /**
      * Get the module info.
@@ -142,18 +142,26 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      */
     private function getTitleIdArrayFromDatabase(): array
     {
-        // only run the database query once per request
-        if (null !== $this->title_id_array) {
-            return $this->title_id_array;
+        // detect language support
+        $language_id = 0;
+        $current_lang = $this->wire('user')->language;
+        if (!empty($current_lang) && $current_lang instanceof Language) {
+            $language_id = $current_lang->id;
         }
 
-        // current language row
-        $language_row = 'data';
-        // detect language support and change the row if
+        // only run the database query once per request & language
+        if (
+            array_key_exists($language_id, self::$language_titles_cache) &&
+            !empty(self::$language_titles_cache[$language_id])
+        ) {
+            return self::$language_titles_cache[$language_id];
+        }
+
+        $value_column = 'data';
+        // change the row if the site has language support and
         // the current language is not the default one
-        $current_lang = $this->wire('user')->language;
-        if (!empty($current_lang) && !$current_lang->isDefault()) {
-            $language_row .= $current_lang->id;
+        if ($language_id && !$current_lang->isDefault()) {
+            $value_column .= $language_id;
         }
 
         // allowed templates for IN statement
@@ -173,19 +181,22 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
          */
         $query = "SELECT
                 field_title.pages_id,
-                field_title.{$language_row} AS title
+                field_title.{$value_column} AS title
             FROM pages
             LEFT JOIN field_title ON pages.id = field_title.pages_id
             WHERE pages.templates_id IN ({$allowed_templates})
             AND pages.status & {$status_bitmask} = 0
-            AND field_title.{$language_row} IS NOT NULL
+            AND field_title.{$value_column} IS NOT NULL
             GROUP BY title
             ORDER BY LENGTH(title)";
-        return $this->title_id_array = $this
-                            ->wire('database')
-                            ->pdo()
-                            ->query($query)
-                            ->fetchAll(\PDO::FETCH_KEY_PAIR);
+        $titles = $this
+                    ->wire('database')
+                    ->pdo()
+                    ->query($query)
+                    ->fetchAll(\PDO::FETCH_KEY_PAIR);
+        // add those titles to the language title cache
+        self::$language_titles_cache = self::$language_titles_cache + [$language_id => $titles];
+        return self::$language_titles_cache[$language_id];
     }
 
     /**
