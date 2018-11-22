@@ -6,7 +6,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
 
     /**
-     * @var array $language_titles_cache Holds cached data for getTitleIdArrayFromDatabase().
+     * @var array $language_titles_cache Holds cached data for getTitleIdArrayForCurrentLanguage().
      */
     private static $language_titles_cache = [];
 
@@ -67,7 +67,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         }
 
         // get all pages of the selected templates as an associative id => title array
-        $id_title_array = $this->getTitleIdArrayFromDatabase();
+        $id_title_array = $this->getTitleIdArrayForCurrentLanguage();
 
         // exclude current id from this replacement if the option to include it is not active
         if (!$this->include_current_page) {
@@ -99,48 +99,13 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     }
 
     /**
-     * Return a link pointing to the url of the passed page with the passed
-     * title as the link text. Will add link classes based on the module
-     * configuration, using the passed page for replacements. May return just
-     * the title if the user doesn't have access to view the page.
-     *
-     * @param string $title The title to use as the link text.
-     * @param Page $page The page to use for the link, replacements and access checks.
-     * @return string
-     */
-    private function buildTitlePageLink(string $title, Page $page): string
-    {
-        // check if the user can view the page, otherwise just return the title as-is
-        if (!$page->viewable()) {
-            return $title;
-        }
-
-        // build attributes
-        $url = $page->url();
-        $class_attribute = '';
-        $css_class = $this->add_link_class;
-        if (!empty($css_class)) {
-            if (strpos($css_class, '{') !== false && strpos($css_class, '}') !== false) {
-                // enable passing page fields to be used for the class, e.g.:
-                // "automatic-link template-{template}"
-                $css_class = $page->getMarkup($css_class);
-                // sanitize css class
-                $css_class = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '', $css_class), ' ');
-            }
-            $class_attribute = ' class="' . $css_class . '"';
-        }
-
-        return '<a href="' . $url . '"' . $class_attribute . '>' . $title . '</a>';
-    }
-
-    /**
      * Gets an array of id => title pairs of all pages that are valid title
      * replacement targets. Will return a cached result after the first call.
      * Uses module configuration to figure out which pages to select.
      *
      * @return array
      */
-    private function getTitleIdArrayFromDatabase(): array
+    private function getTitleIdArrayForCurrentLanguage(): array
     {
         // detect language support
         $language_id = 0;
@@ -197,6 +162,41 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // add those titles to the language title cache
         self::$language_titles_cache = self::$language_titles_cache + [$language_id => $titles];
         return self::$language_titles_cache[$language_id];
+    }
+
+    /**
+     * Return a link pointing to the url of the passed page with the passed
+     * title as the link text. Will add link classes based on the module
+     * configuration, using the passed page for replacements. May return just
+     * the title if the user doesn't have access to view the page.
+     *
+     * @param string $title The title to use as the link text.
+     * @param Page $page The page to use for the link, replacements and access checks.
+     * @return string
+     */
+    private function buildTitlePageLink(string $title, Page $page): string
+    {
+        // check if the user can view the page, otherwise just return the title as-is
+        if (!$page->viewable()) {
+            return $title;
+        }
+
+        // build attributes
+        $url = $page->url();
+        $class_attribute = '';
+        $css_class = $this->add_link_class;
+        if (!empty($css_class)) {
+            if (strpos($css_class, '{') !== false && strpos($css_class, '}') !== false) {
+                // enable passing page fields to be used for the class, e.g.:
+                // "automatic-link template-{template}"
+                $css_class = $page->getMarkup($css_class);
+                // sanitize css class
+                $css_class = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '', $css_class), ' ');
+            }
+            $class_attribute = ' class="' . $css_class . '"';
+        }
+
+        return '<a href="' . $url . '"' . $class_attribute . '>' . $title . '</a>';
     }
 
     /**
