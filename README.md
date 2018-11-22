@@ -11,15 +11,15 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 - Allows you to limit the automatic links by template.
 - Only includes published & visible pages by default, with an option to include hidden pages.
 - Automatically excludes the current page, with an option to change that behaviour.
-- Supports multi-language sites.
+- Supports multi-language sites. Titles will only be linked if a title in the current language is set.
 - Can add configurable CSS classes to all automatically created links.
     - Includes the ability to use page fields as replacement patterns for CSS classes.
 - Queries the database directly for improved performance.
-    - Only queries the database once per request.
+    - Only queries the database once per request & language.
 
 ### Caveats
 
-- This uses regex, so if it's used on a page with many pages, this will have a significant performance impact! Make sure to cache the results.
+- This uses regex, so if it's used on a site with many pages, this will have a significant performance impact! Make sure to cache the results.
 - The formatter does not check if the title is already placed within an anchor tag (this is non-trivial as the replacement is done using regex, which is not great at backtracking - let me know if you have any suggestions).
 - If there are multiple pages with the same title, a random one will get linked (determined by MySQL, as the query uses `GROUP BY` to prevent duplicates).
 - If the page has no title in the current language, it won't be linked (this could be seen as a feature as well ...).
