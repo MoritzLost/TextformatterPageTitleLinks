@@ -31,7 +31,7 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 
 ## Installation & usage
 
-At the moment, this plugin is not available in the ProcessWire module directory, so you have to manually clone or download the repository into your `site/modules` directory and install it through the backend.
+This module is available in the [module directory here](https://modules.processwire.com/modules/textformatter-page-title-links/). You can download it through the backend using the classname `TextformatterPageTitleLinks`. You can also manually clone or download the repository into your `site/modules` directory and install it through the backend.
 
 After that, simply add the textformatter to any fields you want to via the field settings.
 
