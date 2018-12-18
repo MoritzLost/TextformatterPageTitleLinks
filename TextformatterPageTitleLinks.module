@@ -181,22 +181,46 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return $title;
         }
 
-        // build attributes
+        // build url and other attributes
         $url = $page->url();
-        $class_attribute = '';
-        $css_class = $this->add_link_class;
-        if (!empty($css_class)) {
-            if (strpos($css_class, '{') !== false && strpos($css_class, '}') !== false) {
-                // enable passing page fields to be used for the class, e.g.:
-                // "automatic-link template-{template}"
-                $css_class = $page->getMarkup($css_class);
-                // sanitize css class
-                $css_class = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '', $css_class), ' ');
-            }
-            $class_attribute = ' class="' . $css_class . '"';
-        }
+        $attribute_string = $this->getAttributesString($page);
 
-        return '<a href="' . $url . '"' . $class_attribute . '>' . $title . '</a>';
+        return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
+    }
+
+    private function getAttributesString(?Page $page = null): string
+    {
+        if (!$this->add_attributes) {
+            return '';
+        }
+        // get all attributes as an array, ignoring empty lines
+        $attributes = array_filter(explode(PHP_EOL, $this->add_attributes));
+        $attr_filtered = [];
+        foreach ($attributes as $attribute) {
+            // for attributes without a value (standalone attributes), we simply
+            // include it
+            if (strpos($attribute, '=') === false) {
+                $attr_filtered[] = $attribute;
+                continue;
+            }
+            // only one attribute -> value assignment per line
+            if (substr_count($attribute, '=') > 1) {
+                throw new \Exception('Each line may contain only one equaly sign (`=`).');
+            }
+            // extract attribute name and value from the current line
+            [$attr_name, $attr_value] = explode('=', $attribute);
+            // use the passed page for replacements, if any
+            $parsed_value = $page ? $page->getMarkup($attr_value) : $attr_value;
+            // special escaping for classes
+            if ($attr_name === 'class') {
+                $parsed_value = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '_', $parsed_value), ' ');
+            } elseif ($attr_name === 'href') {
+                // ignore for now, may change later
+                continue;
+            }
+            $attr_filtered[] = $attr_name . '="' . htmlspecialchars($parsed_value, ENT_HTML5, 'UTF-8') . '"';
+        }
+        return ' ' . implode(' ', $attr_filtered);
     }
 
     /**

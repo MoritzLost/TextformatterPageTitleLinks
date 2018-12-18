@@ -9,7 +9,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
             'auto_link_templates' => [],
             'include_current_page' => false,
             'include_hidden_pages' => false,
-            'add_link_class' => '',
+            'attributes' => '',
         ];
     }
 
@@ -24,6 +24,15 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $asm->setAsmSelectOption('sortable', false);
         $asm->columnWidth = 33;
 
+        // add all non-system templates
+        foreach ($this->templates as $template) {
+            // cs_graduate.gif
+            if (!($template->flags & Template::flagSystem)) {
+                $template_name = $template->label ? $template->label . ' (' . $template->name . ')' : $template->name;
+                $asm->addOption($template->id, $template_name);
+            }
+        }
+
         // Checkbox to include current page
         $check = wire()->modules->get('InputfieldCheckbox');
         $check->name = 'include_current_page';
@@ -36,26 +45,18 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $hidden->label = $this->_('Include hidden pages?');
         $hidden->columnWidth = 33;
 
-        // text field for css classes
-        $class = wire()->modules->get('InputfieldText');
-        $class->name = 'add_link_class';
-        $class->label = $this->_('Optional class(es) to add to the links.');
-        $class->description = $this->_('All classes created by the module will include those class(es). This is passed to [$page->getMarkup](https://processwire.com/api/ref/page/get-markup/), so you can even use replacement patterns with the link target page. Try this: `template-{template}`');
-        $class->notes = $this->_('You can use this to style automatically created links differently in CSS, or to target them with JavaScript.');
-
-        // add all non-system templates
-        foreach ($this->templates as $template) {
-            // cs_graduate.gif
-            if (!($template->flags & Template::flagSystem)) {
-                $template_name = $template->label ? $template->label . ' (' . $template->name . ')' : $template->name;
-                $asm->addOption($template->id, $template_name);
-            }
-        }
+        // multi-line field for arbitrary attributes for the link
+        $attributes = wire()->modules->get('InputfieldTextarea');
+        $attributes->name = 'add_attributes';
+        $attributes->label = $this->_('Additional attributes for the anchor element (&lt;a&gt;).');
+        $attributes->description = $this->_("Specify each attribute on one line in the following format:\n`attribute=value` (without quotes around the value)\nThe values are parsed by [\$page->getMarkup](https://processwire.com/api/ref/page/get-markup/), so you can use replacement patterns with the link target page. For example:\n`class=automatic-link template-{template}`\n`title=Jump to {template.label}: {title}`");
+        $attributes->notes = $this->_("The `href` attribute is included automatically.");
+        $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Jump to {template.label}: {title}");
 
         $inputfields->add($asm);
         $inputfields->add($check);
         $inputfields->add($hidden);
-        $inputfields->add($class);
+        $inputfields->add($attributes);
         return $inputfields;
     }
 }
