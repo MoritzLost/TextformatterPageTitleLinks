@@ -240,14 +240,22 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // build url and other attributes
         $url = $page->url();
-        $attribute_string = $this->getAttributesString($page);
+        $attribute_string = $this->getAttributesString($this->add_attributes, $page);
 
         return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
     }
 
-    private function getAttributesString(?Page $page = null): string
+    /**
+     * Formats the passed attributes as a string, using optional markup replacements
+     * with the passed page.
+     *
+     * @param array $attributes The attributes in attribute => value format.
+     * @param Page|null $page The page for replacements.
+     * @return string
+     */
+    private function getAttributesString(array $attributes, ?Page $page = null): string
     {
-        if (!$this->add_attributes) {
+        if (empty($attributes)) {
             return '';
         }
         // get all attributes as an array, ignoring empty lines
