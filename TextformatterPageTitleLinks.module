@@ -3,8 +3,6 @@ namespace Processwire;
 
 class TextformatterPageTitleLinks extends Textformatter implements Module
 {
-    const CACHE_NAMESPACE = 'TextformatterPageTitleLinks-';
-
     /**
      * @var array $language_titles_cache Holds cached data for getTitleIdArrayForCurrentLanguage().
      */
@@ -160,7 +158,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                     ->query($query)
                     ->fetchAll(\PDO::FETCH_KEY_PAIR);
         // add those titles to the language title cache
-        self::$language_titles_cache = self::$language_titles_cache + [$language_id => $titles];
+        self::$language_titles_cache[$language_id] = $titles;
         return self::$language_titles_cache[$language_id];
     }
 
