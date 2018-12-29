@@ -4,9 +4,24 @@ namespace Processwire;
 class TextformatterPageTitleLinks extends Textformatter implements Module
 {
     /**
+     * The name of the field used for replacements.
+     */
+    public const TITLE_FIELD_NAME = 'title';
+
+    /**
+     * The database column name (excluding language id).
+     */
+    public const DB_COLUMN = 'data';
+
+    /**
      * @var array $language_titles_cache Holds cached data for getTitleIdArrayForCurrentLanguage().
      */
     private static $language_titles_cache = [];
+
+    /**
+     * @var bool $fields_are_multilanguage Stores multilanguage information for fieldIsMultilanguage().
+     */
+    private static $fields_are_multilanguage = [];
 
     /**
      * Get the module info.
@@ -66,6 +81,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // get all pages of the selected templates as an associative id => title array
         $id_title_array = $this->getTitleIdArrayForCurrentLanguage();
+        bd (self::$language_titles_cache);
 
         // exclude current id from this replacement if the option to include it is not active
         if (!$this->include_current_page) {
@@ -84,6 +100,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         $value = preg_replace_callback(
             // format the titles as regex patterns
             array_map(function ($title) {
+                // lookahead / behind to not link titles within longer words
                 return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
@@ -105,12 +122,8 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      */
     private function getTitleIdArrayForCurrentLanguage(): array
     {
-        // detect language support
-        $language_id = 0;
-        $current_lang = $this->wire('user')->language;
-        if (!empty($current_lang) && $current_lang instanceof Language) {
-            $language_id = $current_lang->id;
-        }
+        // language id will be used for caching, not necessarily the "real" language id
+        $language_id = $this->getLanguageIdForCaching();
 
         // only run the database query once per request & language
         if (
@@ -120,22 +133,30 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return self::$language_titles_cache[$language_id];
         }
 
-        $value_column = 'data';
-        // change the row if the site has language support and
-        // the current language is not the default one
-        if ($language_id && !$current_lang->isDefault()) {
-            $value_column .= $language_id;
+        // use the language specific row if the site has language support, the
+        // current language is not the default one and the field is a
+        // multilanguage field
+        $Q_VALUE_COLUMN = self::DB_COLUMN;
+        if (
+            $language_id &&
+            !$this->languages->get($language_id)->isDefault() &&
+            $this->fieldIsMultilanguage($this->fields->get(self::TITLE_FIELD_NAME))
+        ) {
+            $Q_VALUE_COLUMN .= $language_id;
         }
 
         // allowed templates for IN statement
-        $allowed_templates = implode(', ', $this->auto_link_templates);
+        $Q_ALLOWED_TEMPLATES = implode(', ', $this->auto_link_templates);
 
         // unpublished pages will never be linked
-        $status_bitmask = Page::statusUnpublished;
+        $Q_STATUS_BITMASK = Page::statusUnpublished;
         // hidden pages will only be included if the option is set
         if (!$this->include_hidden_pages) {
-            $status_bitmask += Page::statusHidden;
+            $Q_STATUS_BITMASK += Page::statusHidden;
         }
+
+        // the name of the table, usually "field_title"
+        $Q_DB_TABLE = Field::tablePrefix . self::TITLE_FIELD_NAME;
 
         /**
          * The main query to get all titles for matching templates. Caveats:
@@ -143,23 +164,60 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
          * - If the language value is NULL, there's currently no fallback to the default language.
          */
         $query = "SELECT
-                field_title.pages_id,
-                field_title.{$value_column} AS title
+                {$Q_DB_TABLE}.pages_id,
+                {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} AS title
             FROM pages
-            LEFT JOIN field_title ON pages.id = field_title.pages_id
-            WHERE pages.templates_id IN ({$allowed_templates})
-            AND pages.status & {$status_bitmask} = 0
-            AND field_title.{$value_column} IS NOT NULL
+            LEFT JOIN {$Q_DB_TABLE} ON pages.id = {$Q_DB_TABLE}.pages_id
+            WHERE pages.templates_id IN ({$Q_ALLOWED_TEMPLATES})
+            AND pages.status & {$Q_STATUS_BITMASK} = 0
+            AND {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} IS NOT NULL
             GROUP BY title
             ORDER BY LENGTH(title)";
-        $titles = $this
-                    ->wire('database')
-                    ->pdo()
-                    ->query($query)
-                    ->fetchAll(\PDO::FETCH_KEY_PAIR);
-        // add those titles to the language title cache
-        self::$language_titles_cache[$language_id] = $titles;
-        return self::$language_titles_cache[$language_id];
+        // query the database and add the results to the language title cache
+        return self::$language_titles_cache[$language_id] = $this
+            ->wire('database')
+            ->pdo()
+            ->query($query)
+            ->fetchAll(\PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Get the ID of the current language, if it is relevant to the module. If
+     * the language is not relevant, it will return 0.
+     *
+     * @return int The language ID.
+     */
+    private function getLanguageIdForCaching(): int
+    {
+        $current_lang = $this->wire('user')->language;
+        // only use individual ids per language if the site has language support
+        // and the title field is a multilanguage field
+        if (
+            !empty($current_lang) &&
+            $current_lang instanceof Language &&
+            $this->fieldIsMultilanguage($this->fields->get(self::TITLE_FIELD_NAME))
+        ) {
+            return $current_lang->id;
+        }
+        return 0;
+    }
+
+    /**
+     * Checks if the passed field is a multilanguage field.
+     *
+     * @param Field $field
+     * @return boolean
+     */
+    private function fieldIsMultilanguage(Field $field): bool
+    {
+        // cache the result for each field to avoid unnecessary api calls
+        $name = $field->name;
+        if (isset(self::$fields_are_multilanguage[$name])) {
+            return self::$fields_are_multilanguage[$name];
+        }
+        $is_multilanguage = $field->getFieldtype() instanceof FieldtypeLanguageInterface;
+        self::$fields_are_multilanguage[$name] = $is_multilanguage;
+        return $is_multilanguage;
     }
 
     /**
@@ -196,7 +254,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         $attr_filtered = [];
         foreach ($attributes as $attribute) {
             // for attributes without a value (standalone attributes), we simply
-            // include it
+            // include it and proceed to the next one
             if (strpos($attribute, '=') === false) {
                 $attr_filtered[] = $attribute;
                 continue;
