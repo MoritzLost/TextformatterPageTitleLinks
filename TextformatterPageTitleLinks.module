@@ -222,16 +222,4 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         }
         return ' ' . implode(' ', $attr_filtered);
     }
-
-    /**
-     * Probably not needed any more.
-     */
-    private function getLastModifiedNamespace(?PageArray $pages = null)
-    {
-        if (empty($pages)) {
-            $pages = $this->wire('pages');
-        }
-        $timestamp = $pages->findOne('sort=-modified')->modified;
-        return self::CACHE_NAMESPACE . $timestamp;
-    }
 }
