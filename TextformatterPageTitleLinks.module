@@ -173,7 +173,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             AND pages.status & {$Q_STATUS_BITMASK} = 0
             AND {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} IS NOT NULL
             GROUP BY title
-            ORDER BY LENGTH(title)";
+            ORDER BY CHAR_LENGTH(title) DESC";
         // query the database and add the results to the language title cache
         return self::$language_titles_cache[$language_id] = $this
             ->wire('database')
