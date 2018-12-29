@@ -81,7 +81,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // get all pages of the selected templates as an associative id => title array
         $id_title_array = $this->getTitleIdArrayForCurrentLanguage();
-        bd (self::$language_titles_cache);
 
         // exclude current id from this replacement if the option to include it is not active
         if (!$this->include_current_page) {
