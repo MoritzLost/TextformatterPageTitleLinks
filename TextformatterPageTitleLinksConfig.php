@@ -26,9 +26,8 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
 
         // add all non-system templates
         foreach ($this->templates as $template) {
-            // cs_graduate.gif
             if (!($template->flags & Template::flagSystem)) {
-                $template_name = $template->label ? $template->label . ' (' . $template->name . ')' : $template->name;
+                $template_name = $template->label ? "{$template->label} ({$template->name})" : $template->name;
                 $asm->addOption($template->id, $template_name);
             }
         }
