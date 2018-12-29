@@ -100,7 +100,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             // format the titles as regex patterns
             array_map(function ($title) {
                 // lookahead / behind to not link titles within longer words
-                return '[(?<![\w])' . preg_quote($title) . '(?![\w])]';
+                // also prevents matching if the title is directly inside another
+                // <a> tag already (note the lookahead)
+                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>))]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array) {
