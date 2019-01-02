@@ -99,10 +99,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         $value = preg_replace_callback(
             // format the titles as regex patterns
             array_map(function ($title) {
-                // lookahead / behind to not link titles within longer words
-                // also prevents matching if the title is directly inside another
-                // <a> tag already (note the lookahead)
-                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>))]';
+                // explanation for lookaheads / lookbehinds:
+                // [\w] - don't match page titles within longer words
+                // [^<]*</a> - don't match words directly inside existing anchors
+                // [^<>]*> - don't match inside other tags (e.g. in title attributes)
+                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array) {
@@ -249,11 +250,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * Formats the passed attributes as a string, using optional markup replacements
      * with the passed page.
      *
-     * @param array $attributes The attributes in attribute => value format.
+     * @param ?string $attributes The attributes as input on the settings page (textarea input).
      * @param Page|null $page The page for replacements.
      * @return string
      */
-    private function getAttributesString(array $attributes, ?Page $page = null): string
+    private function getAttributesString(?string $attributes, ?Page $page = null): string
     {
         if (empty($attributes)) {
             return '';
