@@ -102,7 +102,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 // explanation for lookaheads / lookbehinds:
                 // [\w] - don't match page titles within longer words
                 // [^<]*</a> - don't match words directly inside existing anchors
-                // [^<>]*> - don't match inside other tags (e.g. in title attributes)
+                // [^<>]*> - don't match inside attributes of start tags (e.g. in title attributes)
                 return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
@@ -241,9 +241,38 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // build url and other attributes
         $url = $page->url();
-        $attribute_string = $this->getAttributesString($this->add_attributes, $page);
+        $attributes = $this->parseAttributeOption($this->add_attributes);
+        $attribute_string = $this->getAttributesString($attributes, $page);
 
         return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
+    }
+
+    /**
+     * Parse a multiline string as input on the module settings page into an
+     * associative attribute => value array.
+     * 
+     * @var string $attributes_input The multiline string to parse.
+     */
+    private function parseAttributeOption(string $attributes_input): array
+    {
+        // parse the multiline input into an array, ignoring empty lines
+        $attributes = array_filter(explode(PHP_EOL, $attributes_input));
+        // extract the result into an associative attribute => value array
+        $attributes = array_reduce($attributes, function($new, $line) {
+            // for attributes without a value (standalone attributes), we
+            // include it as a name => boolean attribute
+            if (strpos($line, '=') === false) {
+                $new[$line] = true;
+            } elseif (substr_count($line, '=') > 1) {
+                throw new \Exception('Each line in the attributes setting may contain only one equals sign (=).');
+            } else {
+                // extract attribute name and value from the current line
+                [$attr_name, $attr_value] = explode('=', $line);
+                $new[$attr_name] = $attr_value;
+            }
+            return $new;
+        }, []);
+        return $attributes;
     }
 
     /**
@@ -254,37 +283,35 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @param Page|null $page The page for replacements.
      * @return string
      */
-    private function getAttributesString(?string $attributes, ?Page $page = null): string
+    private function getAttributesString(array $attributes, ?Page $page = null): string
     {
         if (empty($attributes)) {
             return '';
         }
-        // get all attributes as an array, ignoring empty lines
-        $attributes = array_filter(explode(PHP_EOL, $this->add_attributes));
         $attr_filtered = [];
-        foreach ($attributes as $attribute) {
-            // for attributes without a value (standalone attributes), we simply
-            // include it and proceed to the next one
-            if (strpos($attribute, '=') === false) {
-                $attr_filtered[] = $attribute;
+        foreach ($attributes as $name => $value) {
+            // bool attributes are included as standalone, without a value
+            if (is_bool($value)) {
+                if (true === $value) {
+                    $attr_filtered[] = $name;
+                }
                 continue;
             }
-            // only one attribute -> value assignment per line
-            if (substr_count($attribute, '=') > 1) {
-                throw new \Exception('Each line may contain only one equaly sign (`=`).');
-            }
-            // extract attribute name and value from the current line
-            [$attr_name, $attr_value] = explode('=', $attribute);
+
             // use the passed page for replacements, if any
-            $parsed_value = $page ? $page->getMarkup($attr_value) : $attr_value;
-            // special escaping for classes
-            if ($attr_name === 'class') {
-                $parsed_value = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '_', $parsed_value), ' ');
-            } elseif ($attr_name === 'href') {
-                // ignore for now, may change later
-                continue;
+            $parsed_value = $page ? $page->getText($value, true, false) : $value;
+            switch ($name) {
+                case 'class':
+                    // special escaping for classes
+                    $parsed_value = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '_', $parsed_value), ' ');
+                    break;
+                case 'href':
+                    // we filter out href, since it's automatically generated
+                    continue 2;
+                default:
+                    break;
             }
-            $attr_filtered[] = $attr_name . '="' . htmlspecialchars($parsed_value, ENT_HTML5, 'UTF-8') . '"';
+            $attr_filtered[] = $name . '="' . htmlspecialchars($parsed_value, ENT_HTML5, 'UTF-8') . '"';
         }
         return ' ' . implode(' ', $attr_filtered);
     }
