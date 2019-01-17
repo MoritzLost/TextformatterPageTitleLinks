@@ -166,7 +166,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
          * - If the language value is NULL, there's currently no fallback to the default language.
          */
         $query = "SELECT
-                {$Q_DB_TABLE}.pages_id,
+                ANY_VALUE({$Q_DB_TABLE}.pages_id),
                 {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} AS title
             FROM pages
             LEFT JOIN {$Q_DB_TABLE} ON pages.id = {$Q_DB_TABLE}.pages_id
