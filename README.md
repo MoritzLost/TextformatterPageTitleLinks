@@ -11,21 +11,23 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 - Allows you to limit the automatic links by template.
 - Only includes published & visible pages by default, with an option to include hidden pages.
 - Automatically excludes the current page, with an option to change that behaviour.
+- Doesn't overwrite existing links, and detects most edge cases (titles inside other tag's attributes, titles inside existing links et c.).
 - Supports multi-language sites. Titles will only be linked if a title in the current language is set.
-- Can add configurable CSS classes to all automatically created links.
-    - Includes the ability to use page fields as replacement patterns for CSS classes.
+- Can add configurable attributes to all automatically created links.
+    - Includes the ability to use page fields as replacement patterns for attributes. For example, you can create CSS classes that include the name of the template of the linked page.
 - Queries the database directly for improved performance.
     - Only queries the database once per request & language.
 
 ### Caveats
 
 - This uses regex, so if it's used on a site with many pages, this will have a significant performance impact! Make sure to cache the results.
-- The formatter does not check if the title is already placed within an anchor tag (this is non-trivial as the replacement is done using regex, which is not great at backtracking - let me know if you have any suggestions).
+- Since it's regex, it can never detect all edges cases with heavily nested HTML elements. Don't use this on a field with lots of custom HTML structures.
 - If there are multiple pages with the same title, a random one will get linked (determined by MySQL, as the query uses `GROUP BY` to prevent duplicates).
 - If the page has no title in the current language, it won't be linked (this could be seen as a feature as well ...).
 
 ### Planned features
 
+- "Minimum length" setting for linked page titles.
 - Make multi-language behaviour configurable.
 - Inbuilt caching per field and page.
 
@@ -43,4 +45,4 @@ Additional settings:
 
 - If you want to include hidden pages, activate the corresponding option.
 - By default, the module will not create self-referential links (links to the page the field is on), this behaviour can be configured.
-- You can add any number of CSS classes you want to add to all automatically generated links through the settings as well.
+- You can add any number attributes you want to add to all automatically generated links through the settings as well. Check out the examples on the module configuration page to get started.
