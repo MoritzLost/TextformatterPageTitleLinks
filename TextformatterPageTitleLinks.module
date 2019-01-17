@@ -24,6 +24,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     private static $fields_are_multilanguage = [];
 
     /**
+     * @var array $add_attributes_parsed This will hold the parsed attributes option - we don't want to do the work twice.
+     */
+    private static $add_attributes_parsed = [];
+
+    /**
      * Get the module info.
      *
      * @return array
@@ -56,7 +61,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
     /**
      * Automatically convert titles of pages in the passed text to links to
-     * those pages. check out the module documentation for more information.
+     * those pages. Check out the module documentation for more information.
      *
      * @param Page $page
      * @param Field $field
@@ -258,6 +263,10 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      */
     private function parseAttributeOption(string $attributes_input): array
     {
+        // return the cached value, if present
+        if (!empty(self::$add_attributes_parsed)) {
+            return self::$add_attributes_parsed;
+        }
         // parse the multiline input into an array, ignoring empty lines
         $attributes = array_filter(explode(PHP_EOL, $attributes_input));
         // extract the result into an associative attribute => value array
@@ -275,7 +284,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             }
             return $new;
         }, []);
-        return $attributes;
+        return self::$add_attributes_parsed = $attributes;
     }
 
     /**
