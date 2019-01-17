@@ -46,3 +46,7 @@ Additional settings:
 - If you want to include hidden pages, activate the corresponding option.
 - By default, the module will not create self-referential links (links to the page the field is on), this behaviour can be configured.
 - You can add any number attributes you want to add to all automatically generated links through the settings as well. Check out the examples on the module configuration page to get started.
+
+## Changelog
+
+You can find the changelog as messages in the annotated tags (see "Releases" tag). You can also read a better-formatted version in the [support thread for this module in the ProcessWire forums](https://processwire.com/talk/topic/20378-automatically-link-page-titles/?tab=comments#comment-179285).
