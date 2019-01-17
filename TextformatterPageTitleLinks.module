@@ -103,7 +103,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 // [\w] - don't match page titles within longer words
                 // [^<]*</a> - don't match words directly inside existing anchors
                 // [^<>]*> - don't match inside attributes of start tags (e.g. in title attributes)
-                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]';
+                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]u';
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array) {
