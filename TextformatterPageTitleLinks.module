@@ -241,8 +241,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // build url and other attributes
         $url = $page->url();
-        $attributes = $this->parseAttributeOption($this->add_attributes);
-        $attribute_string = $this->getAttributesString($attributes, $page);
+        $attribute_string = '';
+        if (!empty($this->add_attributes)) {
+            $attributes = $this->parseAttributeOption($this->add_attributes);
+            $attribute_string = $this->getAttributesString($attributes, $page);
+        }
 
         return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
     }
