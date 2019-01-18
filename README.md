@@ -49,4 +49,4 @@ Additional settings:
 
 ## Changelog
 
-You can find the changelog as messages in the annotated tags (see "Releases" tag). You can also read a better-formatted version in the [support thread for this module in the ProcessWire forums](https://processwire.com/talk/topic/20378-automatically-link-page-titles/?tab=comments#comment-179285).
+You can find the changelog as messages in the annotated tags (see "Releases" tab). You can also read a better-formatted version in the [support thread for this module in the ProcessWire forums](https://processwire.com/talk/topic/20378-automatically-link-page-titles/?tab=comments#comment-179285).
