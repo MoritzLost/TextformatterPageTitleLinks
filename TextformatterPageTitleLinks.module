@@ -285,13 +285,13 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             // for attributes without a value (standalone attributes), we
             // include it as a name => boolean attribute
             if (strpos($line, '=') === false) {
-                $new[$line] = true;
+                $new[trim($line)] = true;
             } elseif (substr_count($line, '=') > 1) {
                 throw new \Exception('Each line in the attributes setting may contain only one equals sign (=).');
             } else {
                 // extract attribute name and value from the current line
                 [$attr_name, $attr_value] = explode('=', $line);
-                $new[$attr_name] = $attr_value;
+                $new[trim($attr_name)] = trim($attr_value);
             }
             return $new;
         }, []);
