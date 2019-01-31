@@ -279,7 +279,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return self::$add_attributes_parsed;
         }
         // parse the multiline input into an array, ignoring empty lines
-        $attributes = array_filter(explode(PHP_EOL, $attributes_input));
+        $attributes = preg_split('/[\n\r]+/', $attributes_input, -1, PREG_SPLIT_NO_EMPTY);
         // extract the result into an associative attribute => value array
         $attributes = array_reduce($attributes, function($new, $line) {
             // for attributes without a value (standalone attributes), we
