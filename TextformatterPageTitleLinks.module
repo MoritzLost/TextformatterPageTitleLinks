@@ -165,19 +165,30 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // the name of the table, usually "field_title"
         $Q_DB_TABLE = Field::tablePrefix . self::TITLE_FIELD_NAME;
 
+        // for duplicate titles, we need to aggregate the id column, or we get
+        // an error depending on the mysql mode; we'll use the preference for
+        // older/newer pages, corresponding to the MIN/MAX aggregation function;
+        // this works in most cases since higher ids will correspond to pages
+        // that were created later.
+        $Q_TITLE_AGGR_FUNC = !empty($this->same_title_order) ? $this->same_title_order : 'MIN';
+
+        // minimum length for linkable titles
+        $Q_MIN_LENGTH = !empty($this->minimum_length) ? $this->minimum_length : 0;
+
         /**
          * The main query to get all titles for matching templates. Caveats:
          * - If multiple pages have the same name, a random one will be selected.
          * - If the language value is NULL, there's currently no fallback to the default language.
          */
         $query = "SELECT
-                ANY_VALUE({$Q_DB_TABLE}.pages_id),
+                {$Q_TITLE_AGGR_FUNC}({$Q_DB_TABLE}.pages_id),
                 {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} AS title
             FROM pages
             LEFT JOIN {$Q_DB_TABLE} ON pages.id = {$Q_DB_TABLE}.pages_id
             WHERE pages.templates_id IN ({$Q_ALLOWED_TEMPLATES})
             AND pages.status & {$Q_STATUS_BITMASK} = 0
             AND {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} IS NOT NULL
+            AND CHAR_LENGTH({$Q_DB_TABLE}.{$Q_VALUE_COLUMN}) >= {$Q_MIN_LENGTH}
             GROUP BY title
             ORDER BY CHAR_LENGTH(title) DESC";
         // query the database and add the results to the language title cache

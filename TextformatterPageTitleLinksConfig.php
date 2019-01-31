@@ -10,6 +10,8 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
             'include_current_page' => false,
             'include_hidden_pages' => false,
             'attributes' => '',
+            'minimum_length' => 0,
+            'same_title_order' => 'MIN',
         ];
     }
 
@@ -52,10 +54,29 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $attributes->notes = $this->_("The `href` attribute is included automatically.");
         $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Jump to {template.label}: {title}");
 
+        // preference for duplicate titles
+        $order = wire()->modules->get('InputfieldSelect');
+        $order->name = 'same_title_order';
+        $order->label = $this->_('Preference for duplicate page titles');
+        $order->description = $this->_('If you have more than one linkable pages with the same title, do you want the oldest or newest page to get linked preferentially?');
+        $order->addOption('MIN', 'Prefer oldest page');
+        $order->addOption('MAX', 'Prefer newest page');
+        $order->required = true;
+        $order->columnWidth = 33;
+
+        // minimum length for linkable titles
+        $minlen = wire()->modules->get('InputfieldInteger');
+        $minlen->name = 'minimum_length';
+        $minlen->label = $this->_('Minimum length for linkable titles');
+        $minlen->attr('min', '0');
+        $minlen->columnWidth = 33;
+
         $inputfields->add($asm);
         $inputfields->add($check);
         $inputfields->add($hidden);
         $inputfields->add($attributes);
+        $inputfields->add($minlen);
+        $inputfields->add($order);
         return $inputfields;
     }
 }
