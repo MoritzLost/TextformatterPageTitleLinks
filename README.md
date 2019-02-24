@@ -26,18 +26,10 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 
 - This uses regex, so if it's used on a site with many pages, this will have a significant performance impact! Make sure to cache the results.
 - Since it's regex, it can never detect all edges cases with heavily nested HTML elements. Don't use this on a field with lots of custom HTML structures.
-- If there are multiple pages with the same title, a random one will get linked (determined by MySQL, as the query uses `GROUP BY` to prevent duplicates).
-- If the page has no title in the current language, it won't be linked (this could be seen as a feature as well ...).
-
-### Planned features
-
-- "Minimum length" setting for linked page titles.
-- Make multi-language behaviour configurable.
-- Inbuilt caching per field and page.
 
 ## Installation
 
-This module is available in the [module directory here](https://modules.processwire.com/modules/textformatter-page-title-links/). You can download it through the backend using the classname `TextformatterPageTitleLinks`. You can also manually clone or download the repository into your `site/modules` directory and install it through the backend.
+This module is available in the [modules directory here](https://modules.processwire.com/modules/textformatter-page-title-links/). You can download it through the backend using the classname `TextformatterPageTitleLinks`. You can also manually clone or download the repository into your `site/modules` directory and install it through the backend.
 
 ## Configuration
 
