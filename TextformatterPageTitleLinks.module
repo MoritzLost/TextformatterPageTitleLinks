@@ -54,9 +54,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @param string $str
      * @return void
      */
-    public function format(&$str): void
+    public function format(&$str, ?array $templates = null): void
     {
-        $this->formatValue($this->wire('page'), new Field(), $str);
+        $this->formatValue($this->wire('page'), new Field(), $str, $templates);
     }
 
     /**
@@ -68,12 +68,16 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @param string $value
      * @return void
      */
-    public function formatValue(Page $page, Field $field, &$value): void
+    public function formatValue(Page $page, Field $field, &$value, ?array $templates = null): void
     {
-        // no templates set yet
-        if (empty($this->auto_link_templates)) {
+        $template_ids = $this->normalizeTemplateList($templates);
+        // no target templates set in module config or empty array passed as argument
+        if (empty($template_ids)) {
             return;
         }
+
+        // get all pages of the selected templates as an associative id => title array
+        $id_title_array = $this->getTitleIdArrayForCurrentLanguage($template_ids);
 
         // if this is a repeater (matrix) page, make sure
         // $page references the "real" current page
@@ -83,9 +87,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         ) {
             $page = wire('page');
         }
-
-        // get all pages of the selected templates as an associative id => title array
-        $id_title_array = $this->getTitleIdArrayForCurrentLanguage();
 
         // exclude current id from this replacement if the option to include it is not active
         if (!$this->include_current_page) {
@@ -120,6 +121,30 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         );
     }
 
+    private function normalizeTemplateList(?array $templates = null): array
+    {
+        // default to returning the template list configured in the module config
+        if ($templates === null) {
+            return $this->auto_link_templates;
+        }
+        // templates may be specificed as ids, names or Template objects
+        return array_map(function ($template) {
+            // we assume a template id
+            if (is_int($template) || is_string($template)) {
+                $obj = $this->templates->get($template);
+                if ($obj) {
+                    return $obj->id;
+                } else {
+                    throw new \InvalidArgumentException("Template '{$template}' not found.");
+                }
+            } elseif ($template instanceof Template) {
+                return $obj->id;
+            } else {
+                throw new \InvalidArgumentException("Invalid template '{$template}'. The template list must consist of template objects, ids or names");
+            }
+        }, $templates);
+    }
+
     /**
      * Gets an array of id => title pairs of all pages that are valid title
      * replacement targets. Will return a cached result after the first call.
@@ -127,18 +152,17 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      *
      * @return array
      */
-    private function getTitleIdArrayForCurrentLanguage(): array
+    private function getTitleIdArrayForCurrentLanguage(array $template_ids): array
     {
         // language id will be used for caching, not necessarily the "real" language id
         $language_id = $this->getLanguageIdForCaching();
         $language_is_default = $this->languages->get($language_id)->isDefault();
+        // results will be cached for the current language and set of templates
+        $titles_cache_key = "{$language_id}-" . implode('-', $template_ids);
 
         // only run the database query once per request & language
-        if (
-            array_key_exists($language_id, self::$language_titles_cache) &&
-            !empty(self::$language_titles_cache[$language_id])
-        ) {
-            return self::$language_titles_cache[$language_id];
+        if (!empty(self::$language_titles_cache[$titles_cache_key])) {
+            return self::$language_titles_cache[$titles_cache_key];
         }
 
         // use the language specific row if the site has language support, the
@@ -150,7 +174,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         }
 
         // allowed templates for IN statement
-        $Q_ALLOWED_TEMPLATES = implode(', ', $this->auto_link_templates);
+        $Q_ALLOWED_TEMPLATES = implode(', ', $template_ids);
 
         // unpublished pages will never be linked
         $Q_STATUS_BITMASK = Page::statusUnpublished;
@@ -198,7 +222,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             GROUP BY title
             ORDER BY CHAR_LENGTH(title) DESC";
         // query the database and add the results to the language title cache
-        return self::$language_titles_cache[$language_id] = $this
+        return self::$language_titles_cache[$title_cache_key] = $this
             ->wire('database')
             ->pdo()
             ->query($query)
