@@ -131,6 +131,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     {
         // language id will be used for caching, not necessarily the "real" language id
         $language_id = $this->getLanguageIdForCaching();
+        $language_is_default = $this->languages->get($language_id)->isDefault();
 
         // only run the database query once per request & language
         if (
@@ -142,13 +143,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // use the language specific row if the site has language support, the
         // current language is not the default one and the field is a
-        // multilanguage field
+        // multilanguage field (implicitly checked, since language_id will be 0 if not)
         $Q_VALUE_COLUMN = self::DB_COLUMN;
-        if (
-            $language_id &&
-            !$this->languages->get($language_id)->isDefault() &&
-            $this->fieldIsMultilanguage($this->fields->get(self::TITLE_FIELD_NAME))
-        ) {
+        if ($language_id && !$language_is_default) {
             $Q_VALUE_COLUMN .= $language_id;
         }
 
