@@ -101,19 +101,27 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             return;
         }
 
+        // case insensitive mode toggle; PCRE modifier to append to the pattern
+        $case_insensitive = $this->case_insensitive_match ? 'i' : '';
+
         // perform the replacement with a regex call
         $value = preg_replace_callback(
             // format the titles as regex patterns
-            array_map(function ($title) {
+            array_map(function ($title) use ($case_insensitive) {
                 // explanation for lookaheads / lookbehinds:
                 // [\w] - don't match page titles within longer words
                 // [^<]*</a> - don't match words directly inside existing anchors
                 // [^<>]*> - don't match inside attributes of start tags (e.g. in title attributes)
-                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]u';
+                return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]u' . $case_insensitive;
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
             function (array $matches) use ($id_title_array) {
                 $page_id = array_search($matches[0], $id_title_array);
+                // if the matched title doesn't exist in the array, it was
+                // probably a case-insensitive match
+                if (empty($page_id) && $this->case_insensitive_match) {
+                    $page_id = array_search(strtolower($matches[0]), array_map('strtolower', $id_title_array));
+                }
                 $linked_page = $this->pages->get((int) $page_id);
                 return $this->buildTitlePageLink($matches[0], $linked_page);
             },
