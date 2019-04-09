@@ -24,7 +24,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $asm->name = 'auto_link_templates'; 
         $asm->label = $this->_('Templates to search for matching titles');
         $asm->setAsmSelectOption('sortable', false);
-        $asm->columnWidth = 33;
+        $asm->columnWidth = 25;
 
         // add all non-system templates
         foreach ($this->templates as $template) {
@@ -34,17 +34,25 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
             }
         }
 
+        // minimum length for linkable titles
+        $minlen = wire()->modules->get('InputfieldInteger');
+        $minlen->name = 'minimum_length';
+        $minlen->label = $this->_('Minimum length for linkable titles');
+        $minlen->attr('min', '0');
+        $minlen->inputType = 'number';
+        $minlen->columnWidth = 25;
+
         // Checkbox to include current page
         $check = wire()->modules->get('InputfieldCheckbox');
         $check->name = 'include_current_page';
         $check->label = $this->_('Include the current page?');
-        $check->columnWidth = 33;
+        $check->columnWidth = 25;
 
         // Checkbox to include hidden pages
         $hidden = wire()->modules->get('InputfieldCheckbox');
         $hidden->name = 'include_hidden_pages';
         $hidden->label = $this->_('Include hidden pages?');
-        $hidden->columnWidth = 33;
+        $hidden->columnWidth = 25;
 
         // multi-line field for arbitrary attributes for the link
         $attributes = wire()->modules->get('InputfieldTextarea');
@@ -64,18 +72,12 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $order->required = true;
         $order->columnWidth = 33;
 
-        // minimum length for linkable titles
-        $minlen = wire()->modules->get('InputfieldInteger');
-        $minlen->name = 'minimum_length';
-        $minlen->label = $this->_('Minimum length for linkable titles');
-        $minlen->attr('min', '0');
-        $minlen->columnWidth = 33;
 
         $inputfields->add($asm);
+        $inputfields->add($minlen);
         $inputfields->add($check);
         $inputfields->add($hidden);
         $inputfields->add($attributes);
-        $inputfields->add($minlen);
         $inputfields->add($order);
         return $inputfields;
     }
