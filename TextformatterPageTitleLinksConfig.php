@@ -7,11 +7,13 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
     {
         return [
             'auto_link_templates' => [],
+            'minimum_length' => 0,
             'include_current_page' => false,
             'include_hidden_pages' => false,
             'attributes' => '',
-            'minimum_length' => 0,
             'same_title_order' => 'MIN',
+            'force_case_sensitive_query' => false,
+            'case_insensitive_match' => false,
         ];
     }
 
@@ -67,6 +69,23 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Jump to {template.label}: {title}");
         $attributes->collapsed = Inputfield::collapsedNo;
 
+        // case insensitive search setting
+        $insensitive = wire()->modules->get('InputfieldCheckbox');
+        $insensitive->name = 'case_insensitive_match';
+        $insensitive->label = $this->_('Use case insensitive mode?');
+        $insensitive->description = $this->_('By default, the module performs a case sensitive search, so only exact title matches are linked. If you want the word `apple` in your text field to be linked to the page `Apple` as well, use this option.');
+        $insensitive->columnWidth = 33;
+        $insensitive->collapsed = Inputfield::collapsedNever;
+
+        // force case sensitive database queries for non-case-sensitive collations
+        $precision = wire()->modules->get('InputfieldCheckbox');
+        $precision->name = 'force_case_sensitive_query';
+        $precision->label = $this->_('Force case sensitive database query for title retrieval?');
+        $precision->description = $this->_('Use this if your database uses a non case-sensitive collation (`_ci` suffix) and you have titles that are identical but for their casing (`apple` and `Apple`).');
+        $precision->notes = $this->_('**Warning: Experimental feature!**');
+        $precision->columnWidth = 33;
+        $precision->collapsed = Inputfield::collapsedNever;
+
         // preference for duplicate titles
         $order = wire()->modules->get('InputfieldSelect');
         $order->name = 'same_title_order';
@@ -76,11 +95,16 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $order->addOption('MAX', 'Prefer newest page');
         $order->required = true;
         $order->columnWidth = 33;
+        $order->collapsed = Inputfield::collapsedNever;
 
         // advanced settings in a collapsed group
         $advanced = wire()->modules->get('InputfieldFieldset');
         $advanced->label = $this->_('Advanced settings');
         $advanced->collapsed = Inputfield::collapsedYes;
+
+        // fields in the "advanced" section
+        $advanced->add($insensitive);
+        $advanced->add($precision);
         $advanced->add($order);
 
         // add the settings fields in order of importance
