@@ -25,6 +25,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $asm->label = $this->_('Templates to search for matching titles');
         $asm->setAsmSelectOption('sortable', false);
         $asm->columnWidth = 25;
+        $asm->collapsed = Inputfield::collapsedNever;
 
         // add all non-system templates
         foreach ($this->templates as $template) {
@@ -41,18 +42,21 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $minlen->attr('min', '0');
         $minlen->inputType = 'number';
         $minlen->columnWidth = 25;
+        $minlen->collapsed = Inputfield::collapsedNever;
 
         // Checkbox to include current page
         $check = wire()->modules->get('InputfieldCheckbox');
         $check->name = 'include_current_page';
         $check->label = $this->_('Include the current page?');
         $check->columnWidth = 25;
+        $check->collapsed = Inputfield::collapsedNever;
 
         // Checkbox to include hidden pages
         $hidden = wire()->modules->get('InputfieldCheckbox');
         $hidden->name = 'include_hidden_pages';
         $hidden->label = $this->_('Include hidden pages?');
         $hidden->columnWidth = 25;
+        $hidden->collapsed = Inputfield::collapsedNever;
 
         // multi-line field for arbitrary attributes for the link
         $attributes = wire()->modules->get('InputfieldTextarea');
@@ -61,6 +65,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $attributes->description = $this->_("Specify each attribute on one line in the following format:\n`attribute=value` (without quotes around the value)\nThe values are parsed by [\$page->getMarkup](https://processwire.com/api/ref/page/get-markup/), so you can use replacement patterns with the link target page. For example:\n`class=automatic-link template-{template}`\n`title=Jump to {template.label}: {title}`");
         $attributes->notes = $this->_("The `href` attribute is included automatically.");
         $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Jump to {template.label}: {title}");
+        $attributes->collapsed = Inputfield::collapsedNo;
 
         // preference for duplicate titles
         $order = wire()->modules->get('InputfieldSelect');
@@ -72,13 +77,19 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $order->required = true;
         $order->columnWidth = 33;
 
+        // advanced settings in a collapsed group
+        $advanced = wire()->modules->get('InputfieldFieldset');
+        $advanced->label = $this->_('Advanced settings');
+        $advanced->collapsed = Inputfield::collapsedYes;
+        $advanced->add($order);
 
+        // add the settings fields in order of importance
         $inputfields->add($asm);
         $inputfields->add($minlen);
         $inputfields->add($check);
         $inputfields->add($hidden);
         $inputfields->add($attributes);
-        $inputfields->add($order);
+        $inputfields->add($advanced);
         return $inputfields;
     }
 }
