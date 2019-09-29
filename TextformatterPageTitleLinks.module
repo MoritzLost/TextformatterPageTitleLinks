@@ -14,16 +14,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     public const DB_COLUMN = 'data';
 
     /**
-     * @var array $language_titles_cache Holds cached data for getTitleIdArrayForCurrentLanguage().
-     */
-    private static $language_titles_cache = [];
-
-    /**
-     * @var bool $fields_are_multilanguage Stores multilanguage information for fieldIsMultilanguage().
-     */
-    private static $fields_are_multilanguage = [];
-
-    /**
      * @var array $add_attributes_parsed This will hold the parsed attributes option - we don't want to do the work twice.
      */
     private static $add_attributes_parsed = [];
@@ -165,13 +155,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // language id will be used for caching, not necessarily the "real" language id
         $language_id = $this->getLanguageIdForCaching();
         $language_is_default = $this->languages->get($language_id)->isDefault();
-        // results will be cached for the current language and set of templates
-        $titles_cache_key = "{$language_id}-" . implode('-', $template_ids);
-
-        // only run the database query once per request & language
-        if (!empty(self::$language_titles_cache[$titles_cache_key])) {
-            return self::$language_titles_cache[$titles_cache_key];
-        }
 
         // use the language specific row if the site has language support, the
         // current language is not the default one and the field is a
@@ -234,7 +217,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             GROUP BY {$Q_GROUP_BY}
             ORDER BY CHAR_LENGTH(title) DESC";
         // query the database and add the results to the language title cache
-        return self::$language_titles_cache[$title_cache_key] = $this
+        return $this
             ->wire('database')
             ->pdo()
             ->query($query)
@@ -270,14 +253,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      */
     private function fieldIsMultilanguage(Field $field): bool
     {
-        // cache the result for each field to avoid unnecessary api calls
-        $name = $field->name;
-        if (isset(self::$fields_are_multilanguage[$name])) {
-            return self::$fields_are_multilanguage[$name];
-        }
-        $is_multilanguage = $field->getFieldtype() instanceof FieldtypeLanguageInterface;
-        self::$fields_are_multilanguage[$name] = $is_multilanguage;
-        return $is_multilanguage;
+        return $field->getFieldtype() instanceof FieldtypeLanguageInterface;
     }
 
     /**
