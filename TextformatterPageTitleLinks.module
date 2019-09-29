@@ -14,11 +14,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     public const DB_COLUMN = 'data';
 
     /**
-     * @var array $add_attributes_parsed This will hold the parsed attributes option - we don't want to do the work twice.
-     */
-    private static $add_attributes_parsed = [];
-
-    /**
      * Get the module info.
      *
      * @return array
@@ -39,39 +34,68 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     }
 
     /**
-     * Shortcut to $this->formatValue using the current page.
-     *
-     * @param string $str
-     * @return void
-     */
-    public function format(&$str, ?array $templates = null): void
-    {
-        $this->formatValue($this->wire('page'), new Field(), $str, $templates);
-    }
-
-    /**
      * Automatically convert titles of pages in the passed text to links to
      * those pages. Check out the module documentation for more information.
      *
-     * @param Page $page
-     * @param Field $field
-     * @param string $value
+     * @param Page $page        The current page. Relevant to the 'include_current_page' option.
+     * @param Field $field      Required by ProcessWire, can be an empty Field (`new Field()`).
+     * @param string $value     The string to format.
      * @return void
      */
-    public function formatValue(
-        Page $page,
-        Field $field,
-        &$value,
-        ?array $templates = null
-    ): void {
-        $template_ids = $this->normalizeTemplateList($templates);
-        // no target templates set in module config or empty array passed as argument
+    public function formatValue(Page $page, Field $field, &$value): void
+    {
+        $this->doFormat($value, $this->modules->getModuleConfigData($this), $page);
+    }
+
+    /**
+     * Shortcut to $this->formatValue using the current page.
+     *
+     * @param string $value     The string to format.
+     * @return void
+     */
+    public function format(&$value): void
+    {
+        $this->formatValue($this->wire('page'), new Field(), $value);
+    }
+
+    /**
+     * Use the module with custom options, overwriting the default module configuration.
+     *
+     * @param string $value     The string to format.
+     * @param array $options    An associative array with options to overwrite the
+     *                          default module options. See the module documentation
+     *                          for available options.
+     * @param Page $page        The page to use as current page.
+     * @return void
+     */
+    public function formatWithOptions(&$value, array $options, ?Page $page = null): void
+    {
+        $page = $page ?? $this->wire('page');
+        // merge the default module options with the passed options (overwriting the defaults)
+        $merged_options = array_merge(
+            $this->modules->getModuleConfigData($this),
+            $options
+        );
+        $this->doFormat($value, $merged_options, $page);
+    }
+
+    /**
+     * Perform the formatting operation on the value using the passed options and page.
+     *
+     * @param string $value     The value to format.
+     * @param array $options    All required options.
+     * @param Page $page        The page to use as current page.
+     * @return void
+     */
+    protected function doFormat(&$value, array $options, Page $page): void {
+        $template_ids = $this->normalizeTemplateList($options['auto_link_templates']);
+        // if no target templates are set, no pages can be linked
         if (empty($template_ids)) {
             return;
         }
 
         // get all pages of the selected templates as an associative id => title array
-        $id_title_array = $this->getTitleIdArrayForCurrentLanguage($template_ids);
+        $id_title_array = $this->getTitleIdArrayForCurrentLanguage($template_ids, $options);
 
         // if this is a repeater (matrix) page, make sure
         // $page references the "real" current page
@@ -83,7 +107,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         }
 
         // exclude current id from this replacement if the option to include it is not active
-        if (!$this->include_current_page) {
+        if (!$options['include_current_page']) {
             $current_id = (int) $page->id;
             if (!empty($current_id) && array_key_exists($current_id, $id_title_array)) {
                 unset($id_title_array[$current_id]);
@@ -96,7 +120,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         }
 
         // case insensitive mode toggle; PCRE modifier to append to the pattern
-        $case_insensitive = $this->case_insensitive_match ? 'i' : '';
+        $case_insensitive = $options['case_insensitive_match'] ? 'i' : '';
 
         // perform the replacement with a regex call
         $value = preg_replace_callback(
@@ -109,59 +133,62 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 return '[(?<![\w])' . preg_quote($title) . '(?!([\w]|[^<]*</a>)|[^<>]*>)]u' . $case_insensitive;
             }, $id_title_array),
             // replace the titles with links to the url to the respective page
-            function (array $matches) use ($id_title_array) {
+            function (array $matches) use ($id_title_array, $options) {
                 $page_id = array_search($matches[0], $id_title_array);
                 // if the matched title doesn't exist in the array, it was
                 // probably a case-insensitive match
-                if (empty($page_id) && $this->case_insensitive_match) {
-                    $page_id = array_search(strtolower($matches[0]), array_map('strtolower', $id_title_array));
+                if (empty($page_id) && $options['case_insensitive_match']) {
+                    $page_id = (int) array_search(strtolower($matches[0]), array_map('strtolower', $id_title_array));
                 }
-                $linked_page = $this->pages->get((int) $page_id);
-                return $this->buildTitlePageLink($matches[0], $linked_page);
+                $linked_page = $this->pages->get($page_id);
+                return $this->buildTitlePageLink($matches[0], $linked_page, $options);
             },
             $value
         );
     }
 
-    private function normalizeTemplateList(?array $templates = null): array
+    /**
+     * Turn an array of template arguments (string, id or Template object) into
+     * a list of template IDs.
+     *
+     * @param array $templates  Templates specified as template name, id or Template object.
+     * @return array
+     */
+    protected function normalizeTemplateList(array $templates): array
     {
-        // default to returning the template list configured in the module config
-        if ($templates === null) {
-            return $this->auto_link_templates;
-        }
-        // templates may be specificed as ids, names or Template objects
         return array_map(function ($template) {
-            // we assume a template id
             if (is_int($template) || is_string($template)) {
+                // if the argument is an ID or a string, we try to get the template object
                 $obj = $this->templates->get($template);
-                if ($obj) {
+                if ($obj && $obj->id) {
+                    // return the ID if the template was found
                     return $obj->id;
                 } else {
                     throw new \InvalidArgumentException("The template with name or ID '{$template}' was not found.");
                 }
             } elseif ($template instanceof Template && $template->id) {
+                // if the template is already a template object, return it's ID
                 return $template->id;
             } else {
-                throw new \InvalidArgumentException("Invalid template '{$template}'. The template list must consist of template objects, IDs or names.");
+                throw new \InvalidArgumentException("Invalid template '{$template}'. The template array must consist of template objects, IDs or names.");
             }
         }, $templates);
     }
 
     /**
      * Gets an array of id => title pairs of all pages that are valid title
-     * replacement targets. Will return a cached result after the first call.
-     * Uses module configuration to figure out which pages to select.
+     * replacement targets.
      *
+     * @var array $template_ids     An array of allowed templates to query.
+     * @var array $options          The module options.
      * @return array
      */
-    private function getTitleIdArrayForCurrentLanguage(array $template_ids): array
+    protected function getTitleIdArrayForCurrentLanguage(array $template_ids, array $options): array
     {
         // language id to append to the database column name, if any
         $language_id = $this->getLanguageIdDatabaseSuffix();
 
-        // use the language specific row if the site has language support, the
-        // current language is not the default one and the field is a
-        // multilanguage field (implicitly checked, since language_id will be 0 if not)
+        // use the language specific row
         $Q_VALUE_COLUMN = self::DB_COLUMN;
         if ($language_id !== null) {
             $Q_VALUE_COLUMN .= $language_id;
@@ -173,7 +200,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // unpublished pages will never be linked
         $Q_STATUS_BITMASK = Page::statusUnpublished;
         // hidden pages will only be included if the option is set
-        if (!$this->include_hidden_pages) {
+        if (!$options['include_hidden_pages']) {
             $Q_STATUS_BITMASK += Page::statusHidden;
         }
 
@@ -184,11 +211,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // an error depending on the mysql mode; we'll use the preference for
         // older/newer pages, corresponding to the MIN/MAX aggregation function;
         // this works in most cases since higher ids will correspond to pages
-        // that were created later.
-        $Q_TITLE_AGGR_FUNC = !empty($this->same_title_order) ? $this->same_title_order : 'MIN';
+        // that were created later
+        $Q_TITLE_AGGR_FUNC = !empty($options['same_title_order']) ? $options['same_title_order'] : 'MIN';
 
         // minimum length for linkable titles
-        $Q_MIN_LENGTH = !empty($this->minimum_length) ? $this->minimum_length : 0;
+        $Q_MIN_LENGTH = !empty($options['minimum_length']) ? $options['minimum_length'] : 0;
 
         // status of the page in the current language
         if ($language_id !== null) {
@@ -200,13 +227,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
 
         // to force the case sensitive title query for a case insensitive collation,
         // we group by binary representation of the title (if the setting is active)
-        $Q_GROUP_BY = $this->force_case_sensitive_query ? 'CAST(title AS BINARY)' : 'title';
+        $Q_GROUP_BY = $options['force_case_sensitive_query'] ? 'CAST(title AS BINARY)' : 'title';
 
-        /**
-         * The main query to get all titles for matching templates. Caveats:
-         * - If multiple pages have the same name, a random one will be selected.
-         * - If the language value is NULL, there's currently no fallback to the default language.
-         */
+        // the main query to get all titles for matching templates
         $query = "SELECT
                 {$Q_TITLE_AGGR_FUNC}({$Q_DB_TABLE}.pages_id),
                 {$Q_DB_TABLE}.{$Q_VALUE_COLUMN} AS title
@@ -219,7 +242,6 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             AND CHAR_LENGTH({$Q_DB_TABLE}.{$Q_VALUE_COLUMN}) >= {$Q_MIN_LENGTH}
             GROUP BY {$Q_GROUP_BY}
             ORDER BY CHAR_LENGTH(title) DESC";
-        // query the database and add the results to the language title cache
         return $this
             ->wire('database')
             ->pdo()
@@ -232,9 +254,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * field, and the current language is not the default one (the default
      * language doesn't contain the language ID in the database column).
      *
-     * @return ?int The language ID, or null if no suffix is required.
+     * @return ?int     The language ID, or null if no suffix is required.
      */
-    private function getLanguageIdDatabaseSuffix(): ?int
+    protected function getLanguageIdDatabaseSuffix(): ?int
     {
         $current_lang = $this->wire('user')->language;
         if (
@@ -251,25 +273,25 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     /**
      * Checks if the passed field is a multilanguage field.
      *
-     * @param Field $field
+     * @param Field $field  The field to check.
      * @return boolean
      */
-    private function fieldIsMultilanguage(Field $field): bool
+    protected function fieldIsMultilanguage(Field $field): bool
     {
         return $field->getFieldtype() instanceof FieldtypeLanguageInterface;
     }
 
     /**
      * Return a link pointing to the url of the passed page with the passed
-     * title as the link text. Will add link classes based on the module
-     * configuration, using the passed page for replacements. May return just
-     * the title if the user doesn't have access to view the page.
+     * title as the link text. Will add link classes based on the passed options.
+     * May return just the title if the user doesn't have access to view the page.
      *
-     * @param string $title The title to use as the link text.
-     * @param Page $page The page to use for the link, replacements and access checks.
+     * @param string $title     The title to use as the link text.
+     * @param Page $page        The page to use for the link, replacements and access checks.
+     * @param array $options    The module options.
      * @return string
      */
-    private function buildTitlePageLink(string $title, Page $page): string
+    protected function buildTitlePageLink(string $title, Page $page, array $options): string
     {
         // check if the user can view the page, otherwise just return the title as-is
         if (!$page->viewable()) {
@@ -279,9 +301,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // build url and other attributes
         $url = $page->url();
         $attribute_string = '';
-        if (!empty($this->add_attributes)) {
-            $attributes = $this->parseAttributeOption($this->add_attributes);
-            $attribute_string = $this->getAttributesString($attributes, $page);
+        if (!empty($options['add_attributes'])) {
+            $attributes = $this->parseAttributeMultilineString($options['add_attributes']);
+            $attribute_string = $this->buildAttributesString($attributes, $page);
         }
 
         return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
@@ -290,15 +312,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     /**
      * Parse a multiline string as input on the module settings page into an
      * associative attribute => value array.
-     * 
-     * @var string $attributes_input The multiline string to parse.
+     *
+     * @var string $attributes_input    The multiline string to parse.
      */
-    private function parseAttributeOption(string $attributes_input): array
+    protected function parseAttributeMultilineString(string $attributes_input): array
     {
-        // return the cached value, if present
-        if (!empty(self::$add_attributes_parsed)) {
-            return self::$add_attributes_parsed;
-        }
         // parse the multiline input into an array, ignoring empty lines
         $attributes = preg_split('/[\n\r]+/', $attributes_input, -1, PREG_SPLIT_NO_EMPTY);
         // extract the result into an associative attribute => value array
@@ -312,38 +330,49 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             } else {
                 // extract attribute name and value from the current line
                 [$attr_name, $attr_value] = explode('=', $line);
-                $new[trim($attr_name)] = trim($attr_value);
+                // convert "true" and "false" strings into boolean
+                $value = trim($attr_value) === 'true' ? true
+                    : trim($attr_value) === 'false' ? false
+                    : trim($attr_value);
+                $new[trim($attr_name)] = $value;
             }
             return $new;
         }, []);
-        return self::$add_attributes_parsed = $attributes;
+        return $attributes;
     }
 
     /**
      * Formats the passed attributes as a string, using optional markup replacements
      * with the passed page.
      *
-     * @param ?string $attributes The attributes as input on the settings page (textarea input).
-     * @param Page|null $page The page for replacements.
+     * @param array $attributes     The attributes as a associative array containing attribute => value pairs.
+     * @param ?Page $page           The page to use for replacements.
      * @return string
      */
-    private function getAttributesString(array $attributes, ?Page $page = null): string
+    protected function buildAttributesString(array $attributes, ?Page $page = null): string
     {
         if (empty($attributes)) {
             return '';
         }
         $attr_filtered = [];
         foreach ($attributes as $name => $value) {
-            // bool attributes are included as standalone, without a value
             if (is_bool($value)) {
+                // bool attributes are included as standalone, without a value
                 if (true === $value) {
                     $attr_filtered[] = $name;
                 }
+                // bool false values are not included at all
                 continue;
             }
 
             // use the passed page for replacements, if any
             $parsed_value = $page ? $page->getText($value, true, false) : $value;
+            // getText will return empty if there are no replacement tags or the
+            // token is not replaceable, so in this case we use the original value
+            if (empty($parsed_value)) {
+                $parsed_value = $value;
+            }
+
             switch ($name) {
                 case 'class':
                     // special escaping for classes
