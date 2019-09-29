@@ -58,8 +58,12 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @param string $value
      * @return void
      */
-    public function formatValue(Page $page, Field $field, &$value, ?array $templates = null): void
-    {
+    public function formatValue(
+        Page $page,
+        Field $field,
+        &$value,
+        ?array $templates = null
+    ): void {
         $template_ids = $this->normalizeTemplateList($templates);
         // no target templates set in module config or empty array passed as argument
         if (empty($template_ids)) {
@@ -133,12 +137,12 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                 if ($obj) {
                     return $obj->id;
                 } else {
-                    throw new \InvalidArgumentException("Template '{$template}' not found.");
+                    throw new \InvalidArgumentException("The template with name or ID '{$template}' was not found.");
                 }
-            } elseif ($template instanceof Template) {
-                return $obj->id;
+            } elseif ($template instanceof Template && $template->id) {
+                return $template->id;
             } else {
-                throw new \InvalidArgumentException("Invalid template '{$template}'. The template list must consist of template objects, ids or names");
+                throw new \InvalidArgumentException("Invalid template '{$template}'. The template list must consist of template objects, IDs or names.");
             }
         }, $templates);
     }
@@ -152,15 +156,14 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      */
     private function getTitleIdArrayForCurrentLanguage(array $template_ids): array
     {
-        // language id will be used for caching, not necessarily the "real" language id
-        $language_id = $this->getLanguageIdForCaching();
-        $language_is_default = $this->languages->get($language_id)->isDefault();
+        // language id to append to the database column name, if any
+        $language_id = $this->getLanguageIdDatabaseSuffix();
 
         // use the language specific row if the site has language support, the
         // current language is not the default one and the field is a
         // multilanguage field (implicitly checked, since language_id will be 0 if not)
         $Q_VALUE_COLUMN = self::DB_COLUMN;
-        if ($language_id && !$language_is_default) {
+        if ($language_id !== null) {
             $Q_VALUE_COLUMN .= $language_id;
         }
 
@@ -188,7 +191,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         $Q_MIN_LENGTH = !empty($this->minimum_length) ? $this->minimum_length : 0;
 
         // status of the page in the current language
-        if ($language_id && !$language_is_default) {
+        if ($language_id !== null) {
             // status for the page in this language will be 1 if it's active
             $Q_LANG_STATUS_CHECK = "AND pages.status{$language_id} & 1 = 1";
         } else {
@@ -225,24 +228,24 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     }
 
     /**
-     * Get the ID of the current language, if it is relevant to the module. If
-     * the language is not relevant, it will return 0.
+     * Get the ID of the current language, if the title field is a multilanguage
+     * field, and the current language is not the default one (the default
+     * language doesn't contain the language ID in the database column).
      *
-     * @return int The language ID.
+     * @return ?int The language ID, or null if no suffix is required.
      */
-    private function getLanguageIdForCaching(): int
+    private function getLanguageIdDatabaseSuffix(): ?int
     {
         $current_lang = $this->wire('user')->language;
-        // only use individual ids per language if the site has language support
-        // and the title field is a multilanguage field
         if (
             !empty($current_lang) &&
             $current_lang instanceof Language &&
+            !$current_lang->isDefault() &&
             $this->fieldIsMultilanguage($this->fields->get(self::TITLE_FIELD_NAME))
         ) {
             return $current_lang->id;
         }
-        return 0;
+        return null;
     }
 
     /**

@@ -11,9 +11,9 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
             'include_current_page' => false,
             'include_hidden_pages' => false,
             'attributes' => '',
-            'same_title_order' => 'MIN',
-            'force_case_sensitive_query' => false,
             'case_insensitive_match' => false,
+            'force_case_sensitive_query' => false,
+            'same_title_order' => 'MIN',
         ];
     }
 
@@ -73,7 +73,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $insensitive = wire()->modules->get('InputfieldCheckbox');
         $insensitive->name = 'case_insensitive_match';
         $insensitive->label = $this->_('Use case insensitive mode?');
-        $insensitive->description = $this->_('By default, the module performs a case sensitive search, so only exact title matches are linked. If you want the word `apple` in your text field to be linked to the page `Apple` as well, use this option.');
+        $insensitive->description = $this->_('By default, the module performs a case sensitive search and replace, so only exact title matches are linked. If you want the word `apple` (lowercase) in your text field to be linked to the page `Apple` (uppercase) as well, use this option.');
         $insensitive->columnWidth = 33;
         $insensitive->collapsed = Inputfield::collapsedNever;
 
@@ -81,7 +81,7 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         $precision = wire()->modules->get('InputfieldCheckbox');
         $precision->name = 'force_case_sensitive_query';
         $precision->label = $this->_('Force case sensitive database query for title retrieval?');
-        $precision->description = $this->_('Use this if your database uses a non case-sensitive collation (`_ci` suffix) and you have titles that are identical but for their casing (`apple` and `Apple`).');
+        $precision->description = $this->_('Use this if your database uses a non case-sensitive collation (`_ci` suffix) and you have titles that are identical but for their casing (`apple` and `Apple`). Note that in this case, you may want to turn off case-insensitive mode.');
         $precision->notes = $this->_('**Warning: Experimental feature!**');
         $precision->columnWidth = 33;
         $precision->collapsed = Inputfield::collapsedNever;
