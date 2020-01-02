@@ -63,10 +63,10 @@ class TextformatterPageTitleLinksConfig extends ModuleConfig
         // multi-line field for arbitrary attributes for the link
         $attributes = wire()->modules->get('InputfieldTextarea');
         $attributes->name = 'add_attributes';
-        $attributes->label = $this->_('Additional attributes for the anchor element (&lt;a&gt;).');
-        $attributes->description = $this->_("Specify each attribute on one line in the following format:\n`attribute=value` (without quotes around the value)\nThe values are parsed by [\$page->getText](https://processwire.com/api/ref/page/get-text/), so you can use replacement patterns with the link target page. For example:\n`class=automatic-link template-{template}`\n`title=Jump to {template.label}: {title}`");
+        $attributes->label = $this->_('Additional attributes for the anchor element (<a>)');
+        $attributes->description = $this->_("Specify each attribute on one line in the following format:\n`attribute=value` (without quotes around the value)\nThe values are parsed by [\$page->getText](https://processwire.com/api/ref/page/get-text/), so you can use replacement patterns with the link target page. For example:\n`class=automatic-link template-{template}`\n`title=Go to {template.label}: {title}`");
         $attributes->notes = $this->_("The `href` attribute is included automatically.");
-        $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Jump to {template.label}: {title}");
+        $attributes->placeholder = $this->_("class=auto-link template-{template}\ntitle=Go to {template.label}: {title}");
         $attributes->collapsed = Inputfield::collapsedNo;
 
         // case insensitive search setting
