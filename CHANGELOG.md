@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.1] - 2020-01-02
+
+- **Bug fix:** Fixed an issue that produced warnings when any module option had not been saved to the database yet. This could occur in version 3.0.0 when upgrading from a previous version.
+- **Bug fix:** Removed nested ternary operator that produced warnings in PHP 7.4.
+
 ## [3.0.0] - 2019-09-30
 
 - **Feature:** It's now possible to invoke the module with custom options that overwrite the module configuration selectively. For example, you can now automatically link pages of different templates in different contexts.
