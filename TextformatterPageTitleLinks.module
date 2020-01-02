@@ -334,10 +334,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             } else {
                 // extract attribute name and value from the current line
                 [$attr_name, $attr_value] = explode('=', $line);
+                $value = trim($attr_value);
                 // convert "true" and "false" strings into boolean
-                $value = trim($attr_value) === 'true' ? true
-                    : trim($attr_value) === 'false' ? false
-                    : trim($attr_value);
+                if ($value === 'true') $value = true;
+                if ($value === 'false') $value = false;
+                // set the attribute => value pair
                 $new[trim($attr_name)] = $value;
             }
             return $new;
