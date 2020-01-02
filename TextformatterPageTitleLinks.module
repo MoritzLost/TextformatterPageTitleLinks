@@ -88,6 +88,10 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @return void
      */
     protected function doFormat(&$value, array $options, Page $page): void {
+        // merge passed options with default options
+        $defaults = (new TextformatterPageTitleLinksConfig())->getDefaults();
+        $options = array_merge($defaults, $options);
+
         $template_ids = $this->normalizeTemplateList($options['auto_link_templates']);
         // if no target templates are set, no pages can be linked
         if (empty($template_ids)) {
