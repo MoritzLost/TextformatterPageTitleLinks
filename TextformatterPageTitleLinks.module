@@ -24,7 +24,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             'title' => __('Automatically link page titles'),
             'summary' => __('This converts all page titles to a link to the corresponding page.'),
             'author' => "Moritz L'Hoest",
-            'version' => '3.0.1',
+            'version' => '4.0.0',
             'href' => 'https://github.com/MoritzLost/TextformatterPageTitleLinks',
             'icon' => 'link',
             'requires' => [
@@ -145,7 +145,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                     $page_id = (int) array_search(strtolower($matches[0]), array_map('strtolower', $id_title_array));
                 }
                 $linked_page = $this->pages->get($page_id);
-                return $this->buildTitlePageLink($matches[0], $linked_page, $options);
+                return $this->buildTitleMarkup($matches[0], $linked_page, $options);
             },
             $value
         );
@@ -286,31 +286,38 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
     }
 
     /**
-     * Return a link pointing to the url of the passed page with the passed
-     * title as the link text. Will add link classes based on the passed options.
-     * May return just the title if the user doesn't have access to view the page.
+     * Build the markup for a title element. Creates a link by default, by the
+     * element can be changed using the $options argument. See the README for
+     * available options.
+     * May return the title as is if the user doesn't have access to view the
+     * page, unless this check is disabled through the $options.
      *
-     * @param string $title     The title to use as the link text.
-     * @param Page $page        The page to use for the link, replacements and access checks.
+     * @param string $title     The title to wrap with markup.
+     * @param Page $page        The page the title belongs to.
      * @param array $options    The module options.
      * @return string
      */
-    protected function buildTitlePageLink(string $title, Page $page, array $options): string
+    public function ___buildTitleMarkup(string $title, Page $page, array $options): string
     {
-        // check if the user can view the page, otherwise just return the title as-is
-        if (!$page->viewable()) {
+        // unless the visibility check is disabled, check if the user can view
+        // the page, otherwise just return the title as-is
+        if (!$options['disable_viewable_check'] && !$page->viewable()) {
             return $title;
         }
 
         // build url and other attributes
-        $url = $page->url();
-        $attribute_string = '';
-        if (!empty($options['add_attributes'])) {
-            $attributes = $this->parseAttributeMultilineString($options['add_attributes']);
-            $attribute_string = $this->buildAttributesString($attributes, $page);
+        $attributes = !empty($options['add_attributes'])
+            ? $this->parseAttributeMultilineString($options['add_attributes'])
+            : [];
+        // add the href attribute, unless this is disabled through the options
+        if (!$options['disable_href']) {
+            $attributes['href'] = $page->url();
         }
+        $attribute_string = $this->buildAttributesString($attributes, $page);
 
-        return '<a href="' . $url . '"' . $attribute_string . '>' . $title . '</a>';
+        // the html tag may be overwritten to something other than a link
+        $html_tag = $options['html_tag'] ?: 'a';
+        return "<{$html_tag} {$attribute_string}>{$title}</{$html_tag}>";
     }
 
     /**
@@ -354,11 +361,8 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
      * @param ?Page $page           The page to use for replacements.
      * @return string
      */
-    protected function buildAttributesString(array $attributes, ?Page $page = null): string
+    public function ___buildAttributesString(array $attributes, ?Page $page = null): string
     {
-        if (empty($attributes)) {
-            return '';
-        }
         $attr_filtered = [];
         foreach ($attributes as $name => $value) {
             if (is_bool($value)) {
@@ -383,14 +387,11 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
                     // special escaping for classes
                     $parsed_value = trim(preg_replace('/[^a-zA-Z0-9 _-]/', '_', $parsed_value), ' ');
                     break;
-                case 'href':
-                    // we filter out href, since it's automatically generated
-                    continue 2;
                 default:
                     break;
             }
             $attr_filtered[] = $name . '="' . htmlspecialchars($parsed_value, ENT_HTML5, 'UTF-8') . '"';
         }
-        return ' ' . implode(' ', $attr_filtered);
+        return implode(' ', $attr_filtered);
     }
 }

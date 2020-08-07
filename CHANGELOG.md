@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.0.0] - 2020-08-07
+
+- **Feature:** Multiple new options have been added to accomodate different usage scenarios. In particular, the update allows you to markup page titles with other HTML elements than the default `<a>` tag. For example, if you have a glossary and want to show a definition of terms that appear in text fields in a popup (instead of linking to the term page), you can change the tag to a `<span>` with a title attribute containing the definition. The new options facilitate this:
+    - New option to change the default `<a>` tag to any inline HTML element.
+    - New option to disable the `href` attribute that is normally included automatically.
+    - New option to disable the check to `$page->viewable()` before linking to a page.
+- **Feature:** The methods the module uses to build markup have been made hookable, allowing for more customization. See the docs for more information on those hooks.
+    - `TextformatterPageTitleLinks::buildTitleMarkup`: Hook this to modify the markup that is generated for a detected page title.
+    - `TextformatterPageTitleLinks::buildAttributesString`: Hook this to change the attributes that get added to the generated markup.
+- **Docs:** Added a step-by-step setup guide to create a glossary with automatic inline definitions.
+- **Docs:** Added information on the new hooks, and a usage example for each.
+- **Miscellaneous**
+    - Improved labels and description of the configuration options to include the current page and hidden pages.
+    - Advanced settings are now open by default, giving them more visibility.
+
 ## [3.0.1] - 2020-01-02
 
 - **Bug fix:** Fixed an issue that produced warnings when any module option had not been saved to the database yet. This could occur in version 3.0.0 when upgrading from a previous version.

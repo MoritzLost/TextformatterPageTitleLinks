@@ -14,6 +14,8 @@ This is a Textformatter module for the [ProcessWire CMF](https://processwire.com
     - [Automatic usage](#automatic-usage)
     - [Manual Usage](#manual-usage)
         - [Options for manual usage](#options-for-manual-usage)
+- [Example project: Glossary terms with inline definitions](#example-project-glossary-terms-with-inline-definitions)
+- [Hooks](#hooks)
 - [Changelog](#changelog)
 
 ## Description
@@ -28,12 +30,12 @@ Textformatters are a type of ProcessWire that allow you to perform some automate
 - Allows you to configure the minimum title length for linked pages.
 - Doesn't overwrite existing links, and detects most edge cases (titles inside other tag's attributes, titles inside existing links et c.).
 - Supports multi-language sites. Titles will only be linked if a title in the current language is set.
-- Can add configurable attributes to all automatically created links.
-    - Includes the ability to use page fields as replacement patterns for attributes. For example, you can create CSS classes that include the name of the template of the linked page.
+- Can add configurable attributes to all automatically created links. This includes the ability to use page fields as replacement patterns for attributes. For example, you can create CSS classes that include the name of the template of the linked page.
+- Extensive options and hooks to change the generated markup completely. Need `<mark>` elements with a `title` attribute based on a page field instead of a link? No problem. See the example project below.
 - Prefer oldest or newest page in the case of duplicate titles.
 - Queries the database directly for improved performance.
 - Has options to switch between case sensitive and case insensitive modes, and force case sensitive behaviour even for case insensitive database collations.
-- Allows you to overwrite the module configuration via the API to call the module with different settings for different requirements on the same page.
+- Allows you to overwrite the module configuration via the API to call the module with different settings for different requirements on the same site.
 
 ### Caveats
 
@@ -56,7 +58,10 @@ On the module configuration page, you can set the options that will be used when
 - **Minimum length for linkable titles:** You can set the minimum length for linked pages. Pages with shorter titles than the defined minimum will not be linked.
 - **Include the current page:** By default, the module will not create self-referential links (links to the page the field is on), but you can include the current page with this option.
 - **Include hidden pages:** Check this if you want to link to hidden pages as well.
-- **Additional attributes for the anchor element (&lt;a&gt;):** You can set any number of attributes (for example, custom classes) you want to add to all automatically generated links through the settings as well. You can also use replacement patterns that get passed to [$page->getText()](https://processwire.com/api/ref/page/get-text/). The `href` attribute is added automatically. Check out the examples on the module configuration page to get started.
+- **Additional attributes for the HTML tag:** You can set any number of attributes (for example, custom classes) you want to add to all automatically generated links through the settings as well. You can also use replacement patterns that get passed to [$page->getText()](https://processwire.com/api/ref/page/get-text/). The `href` attribute is added automatically. Check out the examples on the module configuration page to get started.
+- **Change the HTML tag of the link element:** Use this to wrap titles in something other than `<a>` tags. Possible values include `span`, `mark`, `em`, `strong` or the name of any other inline HTML element.
+- **Disable automatic href attribute:** By default, the module automatically includes an `href` attribute in the generated link. But if you want to markup your titles with a different element, this may not be what you want, so you can disable it here.
+- **Disable automatic visibility check:** By default, the module will not generate a link to a page if it isn't viewable (using [\$page->viewable()](https://processwire.com/api/ref/page-permissions/viewable/). Use this option to disable this check.
 - **Use case insensitive mode:** Add the `i` flag to the regular expressions, so that titles are matched on a case insensitive basis.
 - **Force case sensitive database query for title retrieval:** The database query groups by title, so if there are multiple pages with a similar title, only one is returned. For case insensitive database collations (`_ci` suffix), this means pages whose titles only differ by their casing or use of diacritics, only one row will be returned. Check this option to group by binary representation instead, this way you get all variations from the database.
 - **Preference for duplicate page titles:** If you have multiple pages with the same name, you can tell the module to prefer to link to the oldest or the newest page.
@@ -156,7 +161,7 @@ The following table lists all the available options with their respective labels
             <td>true | false</td>
         </tr>
         <tr>
-            <td>Additional attributes for the anchor element (<code>&lt;a&gt;</code>)</td>
+            <td>Additional attributes for the HTML tag</td>
             <td><code>add_attributes</code></td>
             <td>string</td>
             <td>
@@ -164,6 +169,23 @@ The following table lists all the available options with their respective labels
                 <code>title=Jump to {title} <br> class=autolink autolink-{template}</code>
             </td>
         </tr>
+        <tr>
+            <td>Change the HTML tag of the link element</td>
+            <td><code>html_tag</code></td>
+            <td>string</td>
+            <td>Name of any inline HTML element, like <code>a</code>, <code>span</code> or <code>mark</code>.</td>
+        </tr>
+        <tr>
+            <td>Disable automatic href attribute?</td>
+            <td><code>disable_href</code></td>
+            <td>bool</td>
+            <td>true | false</td>
+        </tr>
+        <tr>
+            <td>Disable automatic visibility check?</td>
+            <td><code>disable_viewable_check</code></td>
+            <td>bool</td>
+            <td>true | false</td>
         </tr>
         <tr>
             <td>Use case insensitive mode?</td>
@@ -185,6 +207,93 @@ The following table lists all the available options with their respective labels
         </tr>
     </tbody>
 </table>
+
+## Example project: Glossary terms with inline definitions
+
+This example will walk you through create a glossary template and automatically marking up glossary terms within your text fields. For example, if our glossary contains the term `ProcessWire`, this term will be automatically marked up with a `<mark>` tag and a `title` wherever it appears in your body text:
+
+    // input
+    Our website is built with ProcessWire!
+
+    // output
+    Our website is built with <mark title="ProcessWire is a Content Management Framework">ProcessWire</mark>
+
+Of course, the markup and what attributes to use are up to you! Follow there steps to get started:
+
+1. Create a new template `glossary-term`. Then create a plain textarea field `description` and add it to the template.
+2. Create a couple of `glossary-term` pages for testing. For the example above, create a page *ProcessWire* and fill out it's description however you like!
+3. Now install this module. Go to the module configuration and select the `glossary-term` template under `Template to search for matching titles`.
+4. Change the following settings to achieve the intended result:
+    1. Under *Additional attributes for the HTML tag*, enter the following line: `title={description}`
+    2. Enter `mark` under *Change the HTML tag of the link element*.
+    3. Check the checkbox *Disable automatic href attribute*.
+    4. Check the checkbox *Disable automatic visibility check*.
+5. This module is a [textformatter](https://modules.processwire.com/categories/textformatter/), so you need to add it to a field in order for it to have any effect. In a standard installation, your pages will have a textarea field `body`, so you can use that for testing. Go to *Setup -> Fields -> body*, select the *Details* tab and add *Automatically link page titles* as a textformatter.
+6. Now create a new page and enter some dummy text into it's `body` field, including the term *ProcessWire*.
+7. Open the page and check the output. You should see the term `ProcessWire` marked up with as described above!
+
+Now you can continue to expand on this feature, here are a couple of suggestions:
+
+1. With the markup in place, you could use a JavaScript library like [Popper](https://popper.js.org/) to display the titles in a nice popup instead of the default browser display of the `title` attribute.
+2. By default, title matching is case-sensitive, so if your glossary term has the title *ProcessWire*, other capitalizations like *Processwire*, *processwire* or *PROCESSWIRE* won't match. You can change that through the module configuration by checking *Use case insensitive mode*.
+3. Maybe you want to have an individual page for each glossary term and link to it. In this case, start by creating the PHP template `glossary-term.php` in your templates directory. Then go to the module settings and reset the HTML tag from `mark` to `a`. Also, uncheck the two checkboxes that disable the href attribute and the visibility checks, respectively.
+
+## Hooks
+
+The module uses two hookable methods for markup generation. You can use hooks to modify the markup for titles.
+
+### TextformatterPageTitleLinks::buildTitleMarkup
+
+- `@param string $title`     The title to use as the link text.
+- `@param Page $page`        The page to use for the link, replacements and access checks.
+- `@param array $options`    The module options.
+- `@return string`
+
+This hook is called to create the markup around a title that the module wants to link. Hook after it to add or modify the markup, or before it to modify the options (see [Options for manual usage](#options-for-manual-usage)).
+
+```php
+wire()->addHookAfter(
+    // add an inline edit link for logged-in users to glossary term
+    'TextformatterPageTitleLinks::buildTitleMarkup',
+    function (HookEvent $e) {
+        $title = $e->arguments(0);
+        $page = $e->arguments(1);
+        $options = $e->arguments(2);
+
+        $linkMarkup = $e->return;
+        if ($page->editable()) {
+            $editLink = sprintf(
+                '<a href="%s">%s</a>',
+                $page->editUrl(),
+                'Edit this glossary term'
+            );
+            $e->return = $linkMarkup . " ({$editLink})";
+        }
+    }
+);
+```
+
+### TextformatterPageTitleLinks::buildAttributesString
+
+- `@param array $attributes`     The attributes as a associative array containing attribute => value pairs.
+- `@param ?Page $page`           The page to use for replacements.
+- `@return string`
+
+Takes an associative array of attribute -> value pairs and generates a HTML attribute string. Hook before this to add any additional dynamic attributes to the markup for titles.
+
+```php
+wire()->addHookBefore(
+    // add an inline edit link for logged-in users to glossary term
+    'TextformatterPageTitleLinks::buildAttributesString',
+    function (HookEvent $e) {
+        $attributes = $e->arguments(0);
+        $page = $e->arguments(1);
+
+        $attributes['data-template'] = $page->template->name;
+        $e->arguments(0, $attributes);
+    }
+);
+```
 
 ## Changelog
 
