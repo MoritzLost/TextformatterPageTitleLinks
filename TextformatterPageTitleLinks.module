@@ -24,7 +24,7 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
             'title' => __('Automatically link page titles'),
             'summary' => __('This converts all page titles to a link to the corresponding page.'),
             'author' => "Moritz L'Hoest",
-            'version' => '4.0.0',
+            'version' => '4.1.0',
             'href' => 'https://github.com/MoritzLost/TextformatterPageTitleLinks',
             'icon' => 'link',
             'requires' => [
@@ -201,9 +201,9 @@ class TextformatterPageTitleLinks extends Textformatter implements Module
         // allowed templates for IN statement
         $Q_ALLOWED_TEMPLATES = implode(', ', $template_ids);
 
-        // unpublished pages will never be linked
-        $Q_STATUS_BITMASK = Page::statusUnpublished;
-        // hidden pages will only be included if the option is set
+        // exclude unpublished and trashed pages
+        $Q_STATUS_BITMASK = Page::statusUnpublished + Page::statusTrash;
+        // exclude hidden pages unless otherwise configured
         if (!$options['include_hidden_pages']) {
             $Q_STATUS_BITMASK += Page::statusHidden;
         }

@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.1.0] - 2020-09-04
+
+- **Feature:** Pages in the trash are now excluded from the pages that can be linked.
+
 ## [4.0.0] - 2020-08-07
 
 - **Feature:** Multiple new options have been added to accomodate different usage scenarios. In particular, the update allows you to markup page titles with other HTML elements than the default `<a>` tag. For example, if you have a glossary and want to show a definition of terms that appear in text fields in a popup (instead of linking to the term page), you can change the tag to a `<span>` with a title attribute containing the definition. The new options facilitate this:
